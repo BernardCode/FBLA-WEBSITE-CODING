@@ -10,7 +10,12 @@ body {
   background-color: #071c39;
   color: white;
   line-height: 1.6;
-  overflow-x: hidden;
+  overflow-y: scroll;
+  scrollbar-width: none;
+}
+
+body::-webkit-scrollbar {
+  display: none;
 }
 
 /* Background */
