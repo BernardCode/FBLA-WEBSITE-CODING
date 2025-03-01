@@ -7,7 +7,9 @@ const JOB_STORE_NAME = 'JobPostings';
 document.addEventListener('DOMContentLoaded', () => {
   // Load all approved job listings from the database
   loadJobListings();
-  
+
+
+
   // Add event listener for the search input
   const searchInput = document.getElementById('searchInput');
   if (searchInput) {

@@ -9,9 +9,46 @@
   
   <!-- Material Icons -->
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
-  
+  <script>
+    document.addEventListener("DOMContentLoaded", function() {
+      // Wait for the page to load before attaching event listeners
+      var adminPanelLink = document.getElementById("adminPanelLink");
+      var adminModal = document.getElementById("adminModal");
+      var closeModalButton = document.getElementById("closeAdminModal");
+      var submitPasswordButton = document.getElementById("submitAdminPassword");
+
+      // Open modal when "Admin Panel" is clicked
+      adminPanelLink.addEventListener("click", function(event) {
+        event.preventDefault(); // Prevent default navigation
+        adminModal.style.display = "flex"; // Show modal
+      });
+
+      // Close modal when "Cancel" is clicked
+      closeModalButton.addEventListener("click", function() {
+        adminModal.style.display = "none"; // Hide modal
+      });
+
+      // Check password when "Submit" is clicked
+      submitPasswordButton.addEventListener("click", function() {
+        var password = document.getElementById("adminPassword").value;
+        if (password === "admin123") {
+          window.location.href = "admin.html"; // Redirect if correct
+        } else {
+          alert("Incorrect password. Please try again.");
+        }
+      });
+
+      // Close modal if user clicks outside of it
+      window.addEventListener("click", function(event) {
+        if (event.target === adminModal) {
+          adminModal.style.display = "none";
+        }
+      });
+    });
+  </script>
   <style>
     /* Base Styles */
+
     body {
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
       background-color: #f5f7fb;
@@ -344,6 +381,7 @@
         <a href="#" class="nav-link">Companies</a>
         <a href="#" class="nav-link">Career Resources</a>
         <a href="#" class="nav-link">Post a Job</a>
+        <a href="#" class="nav-link" id="adminPanelLink">Admin Panel</a>
       </nav>
     </header>
     
@@ -411,7 +449,16 @@
     </div>
   </div>
 
-  <!-- Add the jobs.js script -->
-  <script src="jobs.js"></script>
+  <!-- Admin Password Popup Modal -->
+  <div id="adminModal" class="modal">
+    <div class="modal-content">
+      <h2>Enter Admin Password</h2>
+      <input type="password" id="adminPassword" placeholder="Enter password">
+      <div class="modal-buttons">
+        <button id="submitAdminPassword">Submit</button>
+        <button id="closeAdminModal">Cancel</button>
+      </div>
+    </div>
+  </div>
 </body>
 </html>
