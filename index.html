@@ -4,62 +4,712 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Cupertino High CareerBridge</title>
-    <link rel="stylesheet" href="assets/css/home-styles.css" />
-    <script>
-      // Dropdown toggle
-      function toggleDropdown() {
-        const dropdown = document.getElementById("dropdown");
-        if (dropdown.style.display === "block") {
-          dropdown.style.display = "none";
-        } else {
-          dropdown.style.display = "block";
+    <style>
+      /* Base Styles */
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      }
+
+      body {
+        background-color: #071c39;
+        color: white;
+        line-height: 1.6;
+        overflow-y: scroll;
+        scrollbar-width: none;
+      }
+
+      body::-webkit-scrollbar {
+        display: none;
+      }
+
+      /* Background */
+      .background {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: -1;
+        background-color: #071c39;
+        overflow: hidden;
+      }
+
+      .background .shape {
+        position: absolute;
+        background-color: rgba(188, 5, 255, 0.1);
+        border-radius: 30% 70% 70% 30% / 30% 30% 70% 70%;
+      }
+
+      .background .shape:nth-child(1) {
+        top: -100px;
+        left: -100px;
+        width: 600px;
+        height: 600px;
+      }
+
+      .background .shape:nth-child(2) {
+        bottom: -150px;
+        right: -150px;
+        width: 700px;
+        height: 700px;
+        background-color: rgba(6, 182, 212, 0.1);
+      }
+
+      /* Navigation */
+      nav {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        padding: 1rem 2rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        background-color: rgba(7, 28, 57, 0.9);
+        backdrop-filter: blur(10px);
+        z-index: 1000;
+        box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+      }
+
+      .logo {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .logo img {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+      }
+
+      .logo span {
+        font-size: 1.2rem;
+        font-weight: bold;
+      }
+
+      .highlight {
+        color: #bc05ff;
+      }
+
+      /* New gradient highlight class */
+      .gradient-highlight {
+        background: linear-gradient(90deg, #06b6d4, #bc05ff);
+        -webkit-background-clip: text;
+        background-clip: text;
+        color: transparent;
+        display: inline-block;
+      }
+
+      /* Enhanced Nav Links */
+      .nav-links {
+        display: flex;
+        gap: 2rem;
+      }
+
+      .nav-links a {
+        color: white;
+        text-decoration: none;
+        transition: all 0.3s ease;
+        font-weight: 500;
+        position: relative;
+        padding: 0.5rem 0;
+      }
+
+      .nav-links a::after {
+        content: "";
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        width: 0;
+        height: 2px;
+        background: linear-gradient(90deg, #06b6d4, #bc05ff);
+        transition: width 0.3s ease;
+      }
+
+      .nav-links a:hover {
+        color: #fff;
+      }
+
+      .nav-links a:hover::after {
+        width: 100%;
+      }
+
+      /* Login Button with only click animation */
+      .login-button {
+        background-color: white;
+        color: #071c39;
+        border: none;
+        padding: 0.5rem 1.5rem;
+        border-radius: 8px;
+        font-weight: bold;
+        cursor: pointer;
+        transition: all 0.3s;
+      }
+
+      .login-button:hover {
+        background-color: #f0f0f0;
+        transform: translateY(-2px);
+      }
+
+      /* Only keeping the click animation */
+      .login-button.clicked {
+        animation: pulse 0.5s ease-out;
+      }
+
+      @keyframes pulse {
+        0% {
+          box-shadow: 0 0 0 0 rgba(188, 5, 255, 0.7);
+        }
+        70% {
+          box-shadow: 0 0 0 15px rgba(188, 5, 255, 0);
+        }
+        100% {
+          box-shadow: 0 0 0 0 rgba(188, 5, 255, 0);
         }
       }
 
-      // Scroll effects
+      .login-container {
+        position: relative;
+      }
+
+      .dropdown {
+        position: absolute;
+        top: 100%;
+        right: 0;
+        margin-top: 0.5rem;
+        background-color: white;
+        border-radius: 8px;
+        overflow: hidden;
+        width: 200px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+        display: none;
+        z-index: 1001;
+      }
+
+      .dropdown.active {
+        display: block;
+      }
+
+      .dropdown a {
+        display: block;
+        padding: 0.8rem 1rem;
+        text-decoration: none;
+        color: #071c39;
+        font-weight: 500;
+        transition: background 0.3s;
+      }
+
+      .dropdown a:hover {
+        background-color: #f0f0f0;
+      }
+
+      /* Sections common styling */
+      section {
+        padding: 5rem 2rem;
+        max-width: 1200px;
+        margin: 0 auto;
+        opacity: 0;
+        transform: translateY(50px);
+        transition: opacity 0.8s ease, transform 0.8s ease;
+      }
+
+      section.visible {
+        opacity: 1;
+        transform: translateY(0);
+      }
+
+      .section-header {
+        text-align: center;
+        margin-bottom: 3rem;
+      }
+
+      .section-header h2 {
+        font-size: 2.5rem;
+        margin-bottom: 1rem;
+      }
+
+      .section-header p {
+        max-width: 700px;
+        margin: 0 auto;
+        color: #a3b3cc;
+      }
+
+      /* Hero Section */
+      .hero-section {
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        text-align: center;
+        padding-top: 80px;
+        opacity: 1;
+        transform: none;
+      }
+
+      .hero-content {
+        max-width: 800px;
+      }
+
+      .hero-content h1 {
+        font-size: 3.5rem;
+        margin-bottom: 1.5rem;
+      }
+
+      .hero-buttons {
+        display: flex;
+        gap: 1rem;
+        justify-content: center;
+        margin-top: 2rem;
+      }
+
+      /* Feature Cards */
+      .feature-cards {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 2rem;
+        margin-top: 3rem;
+      }
+
+      .feature-card {
+        background-color: rgba(255, 255, 255, 0.05);
+        border-radius: 16px;
+        padding: 2rem;
+        transition: transform 0.3s, box-shadow 0.3s;
+        position: relative;
+        overflow: hidden;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+      }
+
+      .feature-card:hover {
+        transform: translateY(-10px);
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        border-color: rgba(188, 5, 255, 0.3);
+      }
+
+      .feature-card::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 4px;
+        height: 100%;
+        background-color: #bc05ff;
+      }
+
+      .feature-icon {
+        width: 60px;
+        height: 60px;
+        background-color: rgba(188, 5, 255, 0.1);
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 1.5rem;
+      }
+
+      .feature-card h3 {
+        font-size: 1.5rem;
+        margin-bottom: 1rem;
+      }
+
+      /* Testimonials Section */
+      .testimonials-container {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 2rem;
+      }
+
+      .testimonial-card {
+        background-color: rgba(255, 255, 255, 0.05);
+        border-radius: 16px;
+        padding: 2rem;
+        transition: transform 0.3s;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+      }
+
+      .testimonial-card:hover {
+        transform: translateY(-10px);
+        border-color: rgba(79, 70, 229, 0.3);
+      }
+
+      .testimonial-header {
+        display: flex;
+        align-items: center;
+        margin-bottom: 1.5rem;
+      }
+
+      .testimonial-avatar {
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        background-color: #bc05ff;
+        margin-right: 1rem;
+        overflow: hidden;
+      }
+
+      .testimonial-avatar img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+      }
+
+      .testimonial-author h4 {
+        font-size: 1.1rem;
+        margin-bottom: 0.2rem;
+      }
+
+      .testimonial-author p {
+        color: #ffffff;
+      }
+
+      .testimonial-content {
+        font-style: italic;
+        color: #a3b3cc;
+        position: relative;
+      }
+
+      .testimonial-content::before {
+        content: '"';
+        font-size: 4rem;
+        position: absolute;
+        top: -20px;
+        left: -10px;
+        color: rgba(188, 5, 255, 0.2);
+        font-family: Georgia, serif;
+      }
+
+      /* Top Employers Section */
+      #employers {
+        text-align: center;
+      }
+
+      .employers-subtitle {
+        font-size: 1.2rem;
+        font-weight: 600;
+        color: #bc05ff;
+        margin-bottom: 1rem;
+        display: block;
+      }
+
+      .employers-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+        gap: 2rem;
+        margin-top: 3rem;
+      }
+
+      .employer-logo {
+        background-color: rgba(255, 255, 255, 0.05);
+        border-radius: 12px;
+        aspect-ratio: 16/9;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.3s;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+      }
+
+      .employer-logo:hover {
+        transform: scale(1.05);
+        background-color: rgba(255, 255, 255, 0.1);
+        border-color: rgba(79, 70, 229, 0.3);
+      }
+
+      .employer-logo img {
+        max-width: 80%;
+        max-height: 60%;
+      }
+
+      /* Steps Section */
+      .steps-container {
+        position: relative;
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 2rem 0;
+      }
+
+      .steps-container::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        width: 2px;
+        background-color: rgba(255, 255, 255, 0.2);
+        left: calc(50px / 2);
+        transform: translateX(-50%);
+      }
+
+      .step {
+        display: flex;
+        margin-bottom: 3rem;
+        position: relative;
+      }
+
+      .step:last-child {
+        margin-bottom: 0;
+      }
+
+      .step-number {
+        width: 50px;
+        height: 50px;
+        background-color: #bc05ff;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        font-size: 1.2rem;
+        flex-shrink: 0;
+        z-index: 2;
+      }
+
+      .step-content {
+        padding-left: 2rem;
+      }
+
+      .step-content h3 {
+        font-size: 1.5rem;
+        margin-bottom: 0.5rem;
+      }
+
+      /* Stats Section */
+      .stats-container {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 2rem;
+        margin-top: 3rem;
+      }
+
+      .stat-card {
+        background-color: rgba(255, 255, 255, 0.05);
+        border-radius: 16px;
+        padding: 2rem;
+        text-align: center;
+        transition: transform 0.3s;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+      }
+
+      .stat-card:hover {
+        transform: translateY(-10px);
+        border-color: rgba(79, 70, 229, 0.3);
+      }
+
+      .stat-value {
+        font-size: 3rem;
+        font-weight: bold;
+        color: #bc05ff;
+        margin: 1rem 0;
+      }
+
+      /* Final CTA Section - REMOVED BACKGROUND IMAGE */
+      .cta-section {
+        text-align: center;
+        padding: 8rem 2rem;
+        background-color: rgba(30, 41, 59, 0.5);
+        border-radius: 24px;
+        margin-top: 5rem;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .cta-content {
+        position: relative;
+        z-index: 2;
+        max-width: 700px;
+        margin: 0 auto;
+      }
+
+      .cta-content h2 {
+        font-size: 2.8rem;
+        margin-bottom: 1.5rem;
+      }
+
+      .cta-buttons {
+        display: flex;
+        gap: 1rem;
+        justify-content: center;
+        margin-top: 2.5rem;
+      }
+
+      .cta-primary {
+        background-color: #bc05ff;
+        color: white;
+        border: none;
+        padding: 1rem 2rem;
+        border-radius: 8px;
+        font-weight: bold;
+        font-size: 1.1rem;
+        cursor: pointer;
+        transition: all 0.3s;
+        text-decoration: none;
+      }
+
+      .cta-primary:hover {
+        background-color: #a004d9;
+        transform: translateY(-5px);
+      }
+
+      .cta-secondary {
+        background: transparent;
+        color: white;
+        border: 2px solid white;
+        padding: 1rem 2rem;
+        border-radius: 8px;
+        font-weight: bold;
+        font-size: 1.1rem;
+        cursor: pointer;
+        transition: all 0.3s;
+        text-decoration: none;
+      }
+
+      .cta-secondary:hover {
+        background: rgba(255, 255, 255, 0.1);
+        transform: translateY(-5px);
+      }
+
+      /* Footer */
+      footer {
+        background-color: rgba(0, 0, 0, 0.3);
+        padding: 3rem 2rem;
+        text-align: center;
+        margin-top: 5rem;
+      }
+
+      .footer-links {
+        display: flex;
+        justify-content: center;
+        gap: 2rem;
+        margin: 2rem 0;
+        flex-wrap: wrap;
+      }
+
+      .footer-links a {
+        color: #a3b3cc;
+        text-decoration: none;
+        transition: color 0.3s;
+      }
+
+      .footer-links a:hover {
+        color: white;
+      }
+
+      .copyright {
+        color: #a3b3cc;
+        font-size: 0.9rem;
+      }
+
+      /* Unique scrolling effect */
+      .scroll-indicator {
+        position: fixed;
+        top: 50%;
+        right: 30px;
+        transform: translateY(-50%);
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        z-index: 100;
+      }
+
+      .scroll-dot {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        background-color: rgba(255, 255, 255, 0.3);
+        transition: all 0.3s;
+        cursor: pointer;
+      }
+
+      .scroll-dot.active {
+        background-color: #bc05ff;
+        transform: scale(1.3);
+      }
+
+      /* Responsive adjustments */
+      @media (max-width: 768px) {
+        .nav-links {
+          display: none;
+        }
+
+        .section-header h2 {
+          font-size: 2rem;
+        }
+
+        .hero-content h1 {
+          font-size: 2.5rem;
+        }
+
+        .cta-buttons {
+          flex-direction: column;
+        }
+
+        .cta-content h2 {
+          font-size: 2.2rem;
+        }
+
+        .scroll-indicator {
+          display: none;
+        }
+
+        .steps-container::before {
+          left: 25px;
+        }
+      }
+    </style>
+    <script>
+      // Initialize all sections as visible for preview purposes
       document.addEventListener("DOMContentLoaded", function () {
         const sections = document.querySelectorAll("section");
-        const scrollDots = document.querySelectorAll(".scroll-dot");
-
-        // Create scroll observer
-        const observer = new IntersectionObserver(
-          (entries) => {
-            entries.forEach((entry) => {
-              if (entry.isIntersecting) {
-                entry.target.classList.add("visible");
-
-                // Update active dot
-                const sectionId = entry.target.id;
-                scrollDots.forEach((dot) => {
-                  if (dot.dataset.section === sectionId) {
-                    dot.classList.add("active");
-                  } else {
-                    dot.classList.remove("active");
-                  }
-                });
-              }
-            });
-          },
-          { threshold: 0.2 }
-        );
-
-        // Observe all sections
         sections.forEach((section) => {
-          observer.observe(section);
+          section.classList.add("visible");
         });
+      });
+      
+      // Dropdown toggle with only click animation
+      function toggleDropdown() {
+        const dropdown = document.getElementById("dropdown");
+        const loginButton = document.getElementById("login-button");
+        
+        // Add pulse animation class to button
+        loginButton.classList.add("clicked");
+        
+        // Remove the animation class after animation completes
+        setTimeout(() => {
+          loginButton.classList.remove("clicked");
+        }, 500);
+        
+        // Simple toggle for dropdown
+        if (dropdown.classList.contains("active")) {
+          dropdown.classList.remove("active");
+        } else {
+          dropdown.classList.add("active");
+        }
+      }
 
-        // Scroll to section when dot is clicked
-        scrollDots.forEach((dot) => {
-          dot.addEventListener("click", () => {
-            const targetSection = document.getElementById(dot.dataset.section);
-            if (targetSection) {
-              window.scrollTo({
-                top: targetSection.offsetTop - 80,
-                behavior: "smooth",
-              });
-            }
+      // Close dropdown when clicking outside
+      document.addEventListener("click", function(event) {
+        const dropdown = document.getElementById("dropdown");
+        const loginButton = document.getElementById("login-button");
+        
+        if (dropdown.classList.contains("active") && 
+            !dropdown.contains(event.target) && 
+            event.target !== loginButton) {
+          dropdown.classList.remove("active");
+        }
+      });
+
+      // Prevent the document click event from triggering when clicking on the dropdown itself
+      document.addEventListener("DOMContentLoaded", function() {
+        const dropdown = document.getElementById("dropdown");
+        if (dropdown) {
+          dropdown.addEventListener("click", function(event) {
+            event.stopPropagation();
           });
-        });
+        }
       });
     </script>
   </head>
@@ -73,7 +723,7 @@
     <!-- Navigation -->
     <nav>
       <div class="logo">
-        <img src="assets/img/dusty.webp" alt="Cupertino High Logo" />
+        <img src="/api/placeholder/40/40" alt="Cupertino High Logo" />
         <span>Cupertino High <span class="highlight">CareerBridge</span></span>
       </div>
 
@@ -85,16 +735,10 @@
       </div>
 
       <div class="login-container">
-        <button
-          id="login-button"
-          class="login-button"
-          onclick="toggleDropdown()"
-        >
-          Log In
-        </button>
+        <button id="login-button" class="login-button" onclick="toggleDropdown()">Log In</button>
         <div id="dropdown" class="dropdown">
-          <a href="pages/employer-login.html">Employer Log In</a>
-          <a href="pages/student-login.html">Student Log In</a>
+          <a href="#">Employer Log In</a>
+          <a href="#">Student Log In</a>
         </div>
       </div>
     </nav>
@@ -110,10 +754,10 @@
     </div>
 
     <!-- Hero Section -->
-    <section id="hero" class="hero-section">
+    <section id="hero" class="hero-section visible">
       <div class="hero-content">
         <h1>
-          Launch Your <span class="highlight">Career Journey</span> With
+          Launch Your <span class="gradient-highlight">Career Journey</span> With
           Confidence
         </h1>
         <p>
@@ -122,14 +766,14 @@
           one opportunity at a time.
         </p>
         <div class="hero-buttons">
-          <a href="pages/jobs.html" class="cta-primary">Start Your Journey</a>
+          <a href="#" class="cta-primary">Start Your Journey</a>
           <button class="cta-secondary">Learn More</button>
         </div>
       </div>
     </section>
 
     <!-- Features Section -->
-    <section id="features">
+    <section id="features" class="visible">
       <div class="section-header">
         <h2>Why Choose <span class="highlight">CareerBridge?</span></h2>
         <p>
@@ -141,7 +785,7 @@
       <div class="feature-cards">
         <div class="feature-card">
           <div class="feature-icon">
-            <img src="assets/img/briefcase.png" alt="AI Matching" />
+            <img src="/api/placeholder/60/60" alt="AI Matching" />
           </div>
           <h3>AI-Powered Job Matching</h3>
           <p>
@@ -153,7 +797,7 @@
 
         <div class="feature-card">
           <div class="feature-icon">
-            <img src="assets/img/promotion.png" alt="Exclusive Opportunities" />
+            <img src="/api/placeholder/60/60" alt="Exclusive Opportunities" />
           </div>
           <h3>Exclusive Opportunities</h3>
           <p>
@@ -165,7 +809,7 @@
 
         <div class="feature-card">
           <div class="feature-icon">
-            <img src="assets/img/resume.png" alt="Quick Applications" />
+            <img src="/api/placeholder/60/60" alt="Quick Applications" />
           </div>
           <h3>1-Click Applications</h3>
           <p>
@@ -178,7 +822,7 @@
     </section>
 
     <!-- How It Works Section -->
-    <section id="how-it-works">
+    <section id="how-it-works" class="visible">
       <div class="section-header">
         <h2>Your <span class="highlight">Journey</span> to Success</h2>
         <p>
@@ -239,7 +883,7 @@
     </section>
 
     <!-- Testimonials Section -->
-    <section id="testimonials">
+    <section id="testimonials" class="visible">
       <div class="section-header">
         <h2>Success <span class="highlight">Stories</span></h2>
         <p>
@@ -252,7 +896,7 @@
         <div class="testimonial-card">
           <div class="testimonial-header">
             <div class="testimonial-avatar">
-              <img src="assets/img/emily.png" alt="Emily Chen" />
+              <img src="/api/placeholder/60/60" alt="Emily Chen" />
             </div>
             <div class="testimonial-author">
               <h4>Emily Chen</h4>
@@ -271,7 +915,7 @@
         <div class="testimonial-card">
           <div class="testimonial-header">
             <div class="testimonial-avatar">
-              <img src="assets/img/michael.png" alt="Michael Zhang" />
+              <img src="/api/placeholder/60/60" alt="Michael Zhang" />
             </div>
             <div class="testimonial-author">
               <h4>Michael Zhang</h4>
@@ -290,7 +934,7 @@
         <div class="testimonial-card">
           <div class="testimonial-header">
             <div class="testimonial-avatar">
-              <img src="assets/img/sophia.png" alt="Sophia Patel" />
+              <img src="/api/placeholder/60/60" alt="Sophia Patel" />
             </div>
             <div class="testimonial-author">
               <h4>Sophia Patel</h4>
@@ -309,7 +953,7 @@
     </section>
 
     <!-- Top Employers Section -->
-    <section id="employers">
+    <section id="employers" class="visible">
       <div class="section-header">
         <span class="employers-subtitle">TRUSTED BY TOP COMPANIES</span>
         <h2>Connect With <span class="highlight">Industry Leaders</span></h2>
@@ -321,46 +965,34 @@
 
       <div class="employers-grid">
         <div class="employer-logo">
-          <img src="/assets/img/google.png" alt="Google" />
+          <img src="/api/placeholder/150/84" alt="Google" />
         </div>
         <div class="employer-logo">
-          <img src="/assets/img/apple.png" alt="Apple" />
+          <img src="/api/placeholder/150/84" alt="Apple" />
         </div>
         <div class="employer-logo">
-          <img src="/assets/img/meta.png" alt="Meta" />
+          <img src="/api/placeholder/150/84" alt="Meta" />
         </div>
         <div class="employer-logo">
-          <img src="/assets/img/microsoft.png" alt="Microsoft" />
+          <img src="/api/placeholder/150/84" alt="Microsoft" />
         </div>
         <div class="employer-logo">
-          <img src="/assets/img/adobe.png" alt="Adobe" />
+          <img src="/api/placeholder/150/84" alt="Adobe" />
         </div>
         <div class="employer-logo">
-          <img src="/assets/img/cisco.png" alt="Cisco" />
+          <img src="/api/placeholder/150/84" alt="Cisco" />
         </div>
         <div class="employer-logo">
-          <img src="/assets/img/intel.png" alt="Intel" />
+          <img src="/api/placeholder/150/84" alt="Intel" />
         </div>
         <div class="employer-logo">
-          <img src="/assets/img/nvidia.png" alt="Nvidia" />
-        </div>
-        <div class="employer-logo">
-          <img src="/assets/img/oracle.png" alt="Oracle" />
-        </div>
-        <div class="employer-logo">
-          <img src="/assets/img/tesla.png" alt="Tesla" />
-        </div>
-        <div class="employer-logo">
-          <img src="/assets/img/ibm.png" alt="IBM" />
-        </div>
-        <div class="employer-logo">
-          <img src="/assets/img/salesforce.png" alt="Salesforce" />
+          <img src="/api/placeholder/150/84" alt="Nvidia" />
         </div>
       </div>
     </section>
 
     <!-- Stats Section -->
-    <section id="stats">
+    <section id="stats" class="visible">
       <div class="section-header">
         <h2>Our <span class="highlight">Impact</span> By The Numbers</h2>
         <p>
@@ -396,8 +1028,8 @@
       </div>
     </section>
 
-    <!-- Final CTA Section -->
-    <section id="cta" class="cta-section">
+    <!-- Final CTA Section - REMOVED BACKGROUND IMAGE -->
+    <section id="cta" class="cta-section visible">
       <div class="cta-content">
         <h2>Ready to <span class="highlight">Launch Your Career?</span></h2>
         <p>
@@ -405,10 +1037,24 @@
           opportunities through CareerBridge. Your future starts here.
         </p>
         <div class="cta-buttons">
-          <a href="pages/jobs.html" class="cta-primary">View Job Board</a>
-          <a href="pages/profile.html" class="cta-secondary">Create Your Profile</a>
+          <a href="#" class="cta-primary">View Job Board</a>
+          <a href="#" class="cta-secondary">Create Your Profile</a>
         </div>
       </div>
     </section>
+
+    <!-- Footer -->
+    <footer>
+      <div class="footer-links">
+        <a href="#">About Us</a>
+        <a href="#">Privacy Policy</a>
+        <a href="#">Terms of Service</a>
+        <a href="#">Contact</a>
+        <a href="#">FAQ</a>
+      </div>
+      <div class="copyright">
+        &copy; 2025 Cupertino High CareerBridge. All rights reserved.
+      </div>
+    </footer>
   </body>
 </html>
