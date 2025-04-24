@@ -1,366 +1,434 @@
-// IndexedDB database configuration
-const DB_NAME = "CareerBridgeDB";
-const DB_VERSION = 1;
-const JOB_STORE_NAME = "JobPostings";
+// Import Firebase
+import { db, auth } from "./src/config/firebase.js";
+import {
+  collection,
+  query,
+  where,
+  getDocs,
+  orderBy,
+  limit,
+  startAfter,
+  doc,
+  updateDoc,
+  increment,
+  addDoc,
+  serverTimestamp,
+  arrayUnion,
+  getDoc,
+} from "firebase/firestore";
+
+// Global variables for pagination
+let lastVisible = null;
+let currentJobs = [];
 
 // Wait for DOM to be fully loaded before adding event listeners
-document.addEventListener("DOMContentLoaded", () => {
-  // Load all approved job listings from the database
-  loadJobListings();
+document.addEventListener("DOMContentLoaded", async () => {
+  // Check auth state
+  auth.onAuthStateChanged(async (user) => {
+    // Load jobs regardless of auth state
+    await loadApprovedJobs();
 
-  // Add event listener for the search input
-  const searchInput = document.getElementById("searchInput");
-  if (searchInput) {
-    searchInput.addEventListener("input", () => {
-      applyFilters();
-    });
-  }
-
-  // Add event listeners for filter inputs
-  const workTypeFilter = document.getElementById("workTypeFilter");
-  if (workTypeFilter) {
-    workTypeFilter.addEventListener("change", () => {
-      applyFilters();
-    });
-  }
-
-  const minPayFilter = document.getElementById("minPayFilter");
-  if (minPayFilter) {
-    minPayFilter.addEventListener("input", () => {
-      applyFilters();
-    });
-  }
-
-  // Add event listener for clear filters button
-  const clearFiltersBtn = document.getElementById("clearFiltersBtn");
-  if (clearFiltersBtn) {
-    clearFiltersBtn.addEventListener("click", () => {
-      // Reset all filter inputs
-      if (workTypeFilter) workTypeFilter.value = "";
-      if (minPayFilter) minPayFilter.value = "";
-      if (searchInput) searchInput.value = "";
-
-      // Reload all job listings
-      loadJobListings();
-    });
-  }
+    // Add event listeners for search and filters
+    setupSearchAndFilters();
+  });
 });
 
 /**
- * Load all approved job listings from the database and display them
+ * Load approved jobs from Firestore
+ * @param {Object} searchParams - Search and filter parameters
  */
-function loadJobListings() {
-  const jobListingsContainer = document.getElementById("jobListings");
+async function loadApprovedJobs(searchParams = {}) {
+  const jobListings = document.getElementById("jobListings");
+  if (!jobListings) return;
 
-  // Show loading indicator
-  jobListingsContainer.innerHTML =
+  jobListings.innerHTML =
     '<div class="loading-message">Loading job listings...</div>';
 
-  // Open database connection
-  const request = indexedDB.open(DB_NAME, DB_VERSION);
+  try {
+    // Build query with filters
+    let jobsQuery = query(
+      collection(db, "jobs"),
+      where("status", "==", "Approved")
+    );
 
-  request.onerror = (event) => {
-    jobListingsContainer.innerHTML = `<div class="error-message">
-      Error loading database: ${event.target.error}</div>`;
-  };
+    // Add additional filters if provided
+    if (searchParams.jobType) {
+      jobsQuery = query(
+        jobsQuery,
+        where("jobType", "==", searchParams.jobType)
+      );
+    }
 
-  request.onsuccess = (event) => {
-    const db = event.target.result;
+    if (searchParams.workArrangement) {
+      jobsQuery = query(
+        jobsQuery,
+        where("workArrangement", "==", searchParams.workArrangement)
+      );
+    }
 
-    // Check if the JobPostings store exists
-    if (!db.objectStoreNames.contains(JOB_STORE_NAME)) {
-      jobListingsContainer.innerHTML = `<div class="empty-message">
-        No job listings available.</div>`;
+    // Add sorting
+    jobsQuery = query(jobsQuery, orderBy("dateCreated", "desc"), limit(10));
+
+    // Add pagination if we have a last item
+    if (searchParams.startAfter && lastVisible) {
+      jobsQuery = query(jobsQuery, startAfter(lastVisible));
+    }
+
+    const querySnapshot = await getDocs(jobsQuery);
+
+    if (querySnapshot.empty && !searchParams.startAfter) {
+      jobListings.innerHTML = `
+        <div class="empty-message">
+          <h3>No job listings available</h3>
+          <p>Check back later for new opportunities!</p>
+        </div>
+      `;
+      updateJobCount(0);
       return;
     }
 
-    const transaction = db.transaction([JOB_STORE_NAME], "readonly");
-    const jobStore = transaction.objectStore(JOB_STORE_NAME);
-    const getAllRequest = jobStore.getAll();
+    // Update last visible for pagination
+    const snapshots = querySnapshot.docs;
+    lastVisible = snapshots[snapshots.length - 1];
 
-    getAllRequest.onsuccess = () => {
-      const allJobs = getAllRequest.result;
+    // Clear jobs array if this is first page load
+    if (!searchParams.startAfter) {
+      currentJobs = [];
+    }
 
-      // Filter only approved jobs
-      const approvedJobs = allJobs.filter(
-        (job) => job.jobStatus === "Reviewed"
+    // Store jobs for filtering
+    snapshots.forEach((doc) => {
+      const job = { id: doc.id, ...doc.data() };
+      currentJobs.push(job);
+    });
+
+    // Apply text search filter if needed
+    let displayedJobs = currentJobs;
+    if (searchParams.searchTerm) {
+      const term = searchParams.searchTerm.toLowerCase();
+      displayedJobs = currentJobs.filter(
+        (job) =>
+          job.jobTitle.toLowerCase().includes(term) ||
+          job.company.toLowerCase().includes(term) ||
+          (job.jobDescription &&
+            job.jobDescription.toLowerCase().includes(term)) ||
+          (job.requirements && job.requirements.toLowerCase().includes(term))
       );
+    }
 
-      if (approvedJobs.length === 0) {
-        jobListingsContainer.innerHTML = `<div class="empty-message">
-          No approved job listings available.</div>`;
-        return;
-      }
+    // Apply minimum pay filter if provided
+    if (searchParams.minPay) {
+      const minPay = parseFloat(searchParams.minPay);
+      displayedJobs = displayedJobs.filter(
+        (job) =>
+          (job.minPay && job.minPay >= minPay) ||
+          (job.maxPay && job.maxPay >= minPay)
+      );
+    }
 
-      // Sort jobs by creation date (newest first)
-      approvedJobs.sort((a, b) => {
-        const dateA = new Date(a.dateCreated || 0);
-        const dateB = new Date(b.dateCreated || 0);
-        return dateB - dateA;
-      });
+    // Clear existing jobs if not paginating
+    if (!searchParams.startAfter) {
+      jobListings.innerHTML = "";
+    } else {
+      // Remove load more button if it exists
+      const loadMoreBtn = document.querySelector(".load-more-btn");
+      if (loadMoreBtn) loadMoreBtn.remove();
+    }
 
-      // Clear and rebuild the jobs container
-      jobListingsContainer.innerHTML = "";
+    // Show no results message if filtered to empty
+    if (displayedJobs.length === 0) {
+      jobListings.innerHTML = `
+        <div class="empty-message">
+          <h3>No matching jobs found</h3>
+          <p>Try adjusting your search criteria</p>
+          <button id="clearFiltersBtn" class="btn secondary-btn">Clear Filters</button>
+        </div>
+      `;
+      document
+        .getElementById("clearFiltersBtn")
+        .addEventListener("click", clearFilters);
+      updateJobCount(0);
+      return;
+    }
 
-      // Add each job to the container
-      approvedJobs.forEach((job) => {
-        const jobElement = createJobElement(job);
-        jobListingsContainer.appendChild(jobElement);
-      });
+    // Create job cards
+    displayedJobs.forEach(async (job) => {
+      // Check if user has already applied
+      let userHasApplied = false;
 
-      // Update job count
-      updateJobCount(approvedJobs.length);
-    };
+      if (auth.currentUser) {
+        // Check if user is in applicants array
+        userHasApplied =
+          job.applicants && job.applicants.includes(auth.currentUser.uid);
 
-    getAllRequest.onerror = (event) => {
-      jobListingsContainer.innerHTML = `<div class="error-message">
-        Error fetching jobs: ${event.target.error}</div>`;
-    };
-  };
-}
-
-/**
- * Apply all filters and search criteria to the job listings
- */
-function applyFilters() {
-  const searchInput = document.getElementById("searchInput");
-  const workTypeFilter = document.getElementById("workTypeFilter");
-  const minPayFilter = document.getElementById("minPayFilter");
-
-  const searchTerm = searchInput ? searchInput.value.toLowerCase() : "";
-  const workType = workTypeFilter ? workTypeFilter.value : "";
-  const minPay =
-    minPayFilter && minPayFilter.value ? parseFloat(minPayFilter.value) : null;
-
-  // Open database connection
-  const request = indexedDB.open(DB_NAME, DB_VERSION);
-
-  request.onsuccess = (event) => {
-    const db = event.target.result;
-    const transaction = db.transaction([JOB_STORE_NAME], "readonly");
-    const jobStore = transaction.objectStore(JOB_STORE_NAME);
-    const getAllRequest = jobStore.getAll();
-
-    getAllRequest.onsuccess = () => {
-      const allJobs = getAllRequest.result;
-
-      // First filter for approved jobs only
-      let filteredJobs = allJobs.filter((job) => job.jobStatus === "Reviewed");
-
-      // Then apply work type filter if selected
-      if (workType) {
-        filteredJobs = filteredJobs.filter(
-          (job) => job.workArrangement === workType
-        );
-      }
-
-      // Apply min pay filter if provided
-      if (minPay !== null) {
-        filteredJobs = filteredJobs.filter((job) => {
-          // Include jobs that have a minPay greater than or equal to the filter amount
-          // OR jobs that have a maxPay greater than or equal to the filter amount
-          return (
-            (job.minPay !== null && job.minPay >= minPay) ||
-            (job.maxPay !== null && job.maxPay >= minPay)
+        // If not found in array, check applications collection
+        if (!userHasApplied) {
+          const applicationsQuery = query(
+            collection(db, "applications"),
+            where("jobId", "==", job.id),
+            where("studentId", "==", auth.currentUser.uid),
+            limit(1)
           );
-        });
-      }
 
-      // Apply search term if provided
-      if (searchTerm) {
-        filteredJobs = filteredJobs.filter((job) => {
-          const jobTitle = job.jobTitle.toLowerCase();
-          const company = job.company.toLowerCase();
-          const description = job.jobDescription.toLowerCase();
-
-          return (
-            jobTitle.includes(searchTerm) ||
-            company.includes(searchTerm) ||
-            description.includes(searchTerm)
-          );
-        });
-      }
-
-      // Display filtered jobs
-      const jobListingsContainer = document.getElementById("jobListings");
-
-      if (filteredJobs.length === 0) {
-        jobListingsContainer.innerHTML = `<div class="empty-message">
-          No jobs match your search criteria. <a href="#" id="resetFiltersLink">Reset filters</a></div>`;
-
-        const resetLink = document.getElementById("resetFiltersLink");
-        if (resetLink) {
-          resetLink.addEventListener("click", (e) => {
-            e.preventDefault();
-            document.getElementById("clearFiltersBtn").click();
-          });
+          const appSnapshot = await getDocs(applicationsQuery);
+          userHasApplied = !appSnapshot.empty;
         }
-
-        updateJobCount(0);
-        return;
       }
 
-      // Clear and rebuild the jobs container
-      jobListingsContainer.innerHTML = "";
+      job.userHasApplied = userHasApplied;
+      const jobCard = createJobCard(job);
+      jobListings.appendChild(jobCard);
+    });
 
-      // Add each filtered job to the container
-      filteredJobs.forEach((job) => {
-        const jobElement = createJobElement(job);
-        jobListingsContainer.appendChild(jobElement);
+    // Update job count
+    updateJobCount(displayedJobs.length);
+
+    // Add load more button if we have more results
+    if (snapshots.length === 10) {
+      const loadMoreBtn = document.createElement("button");
+      loadMoreBtn.className = "btn load-more-btn";
+      loadMoreBtn.textContent = "Load More Jobs";
+      loadMoreBtn.addEventListener("click", () => {
+        loadApprovedJobs({ ...searchParams, startAfter: true });
       });
-
-      // Update job count
-      updateJobCount(filteredJobs.length);
-    };
-  };
+      jobListings.appendChild(loadMoreBtn);
+    }
+  } catch (error) {
+    console.error("Error loading jobs:", error);
+    jobListings.innerHTML = `<div class="error-message">Error loading jobs: ${error.message}</div>`;
+  }
 }
 
 /**
- * Create a job listing element
+ * Create a job card element
  * @param {Object} job - The job data
- * @returns {HTMLElement} - The created job element
+ * @returns {HTMLElement} - The job card element
  */
-function createJobElement(job) {
-  const jobElement = document.createElement("div");
-  jobElement.className = "job-item";
-  jobElement.setAttribute("data-job-id", job.id);
+function createJobCard(job) {
+  const jobCard = document.createElement("div");
+  jobCard.className = "job-card";
+  jobCard.setAttribute("data-job-id", job.id);
+
+  // Format dates
+  const postedDate = job.dateCreated
+    ? new Date(job.dateCreated.toDate()).toLocaleDateString()
+    : "Unknown";
 
   // Format pay range
-  let payDisplay = "Unpaid Position";
-  if (job.minPay !== null) {
-    payDisplay = `${job.minPay.toLocaleString()}`;
-  } else if (job.maxPay !== null) {
-    payDisplay = `${job.maxPay.toLocaleString()}`;
-  }
+  let payRange = formatPayRange(job.minPay, job.maxPay);
 
-  // Get work arrangement text
-  const workArrangement = getWorkArrangementInfo(job.workArrangement);
+  // Check if user has already applied
+  const userHasApplied = job.userHasApplied || false;
 
-  // Format application count
-  const applicationCount = job.applicationCount || 0;
-
-  // Format the job description (truncate for preview)
-  const truncatedDescription = truncateText(job.jobDescription, 200);
-
-  jobElement.innerHTML = `
+  jobCard.innerHTML = `
     <div class="job-header">
       <div class="job-title-area">
         <h2 class="job-title">${job.jobTitle}</h2>
-        <div class="company-name">${job.company}</div>
+        <div class="company-name">
+          ${job.company}
+        </div>
       </div>
       <div class="job-meta">
-        <span class="job-type-badge">${workArrangement.text}</span>
-        <span class="job-pay-badge">${payDisplay}</span>
+        <span class="job-tag job-type">${job.jobType}</span>
+        <span class="job-tag job-arrangement">${job.workArrangement}</span>
+        <span class="job-tag job-pay">${payRange}</span>
       </div>
     </div>
-    <div class="job-description">
-      <p>${truncatedDescription}</p>
+    
+    <div class="job-details">
+      <p class="job-description">${truncateText(
+        job.jobDescription || "",
+        200
+      )}</p>
+      <div class="skills-container">
+        ${
+          job.requirements
+            ? `<p class="job-requirements">${truncateText(
+                job.requirements,
+                100
+              )}</p>`
+            : ""
+        }
+      </div>
     </div>
+    
     <div class="job-footer">
-      <span class="applications-count">${applicationCount} applications</span>
-      <button class="apply-button" data-job-id="${job.id}">Apply Now</button>
+      <div class="job-info">
+        <span class="job-posted">Posted ${postedDate}</span>
+        <span class="job-applications">${
+          job.applications || 0
+        } applications</span>
+      </div>
+      <button class="btn ${userHasApplied ? "applied-btn" : "apply-btn"}" ${
+    userHasApplied ? "disabled" : ""
+  } data-job-id="${job.id}">
+          ${userHasApplied ? "Applied" : "Apply Now"}
+      </button>
     </div>
   `;
 
   // Add event listener to Apply button
-  const applyButton = jobElement.querySelector(".apply-button");
-  if (applyButton) {
-    // Check if the user has already applied to this job
-    if (job.userHasApplied) {
-      applyButton.className = "applied-button";
-      applyButton.textContent = "Applied";
-      applyButton.disabled = true;
-    } else {
-      applyButton.addEventListener("click", (e) => {
-        incrementApplicationCount(job.id);
-        // Change button appearance after applying
-        e.target.className = "applied-button";
-        e.target.textContent = "Applied";
-        e.target.disabled = true;
-      });
-    }
+  const applyButton = jobCard.querySelector(`[data-job-id="${job.id}"]`);
+  if (applyButton && !userHasApplied) {
+    applyButton.addEventListener("click", () => applyToJob(job));
   }
 
-  return jobElement;
+  return jobCard;
 }
 
 /**
- * Increment the application count for a job
- * @param {number} jobId - The ID of the job
+ * Apply to a job
+ * @param {Object} job - The job to apply to
  */
-function incrementApplicationCount(jobId) {
-  const request = indexedDB.open(DB_NAME, DB_VERSION);
+async function applyToJob(job) {
+  if (!auth.currentUser) {
+    window.location.href = "student-login.html";
+    return;
+  }
 
-  request.onsuccess = (event) => {
-    const db = event.target.result;
-    const transaction = db.transaction([JOB_STORE_NAME], "readwrite");
-    const jobStore = transaction.objectStore(JOB_STORE_NAME);
+  try {
+    // Check if user has already applied
+    const applicationsQuery = query(
+      collection(db, "applications"),
+      where("jobId", "==", job.id),
+      where("studentId", "==", auth.currentUser.uid),
+      limit(1)
+    );
 
-    // Get the job first to update it
-    const getRequest = jobStore.get(jobId);
+    const appSnapshot = await getDocs(applicationsQuery);
+    if (!appSnapshot.empty) {
+      showNotification("You have already applied to this job", "error");
+      return;
+    }
 
-    getRequest.onsuccess = () => {
-      const job = getRequest.result;
-      if (job) {
-        // Update the application count
-        job.applicationCount = (job.applicationCount || 0) + 1;
+    // Get student profile data
+    const studentDoc = await getDoc(doc(db, "users", auth.currentUser.uid));
+    if (!studentDoc.exists()) {
+      showNotification("Please complete your profile before applying", "error");
+      window.location.href = "profile.html";
+      return;
+    }
 
-        // Mark that the user has applied to this job
-        job.userHasApplied = true;
+    const studentData = studentDoc.data();
 
-        // Put the updated job back into the store
-        const updateRequest = jobStore.put(job);
+    // Create application document
+    const applicationData = {
+      jobId: job.id,
+      jobTitle: job.jobTitle,
+      company: job.company,
+      studentId: auth.currentUser.uid,
+      studentName: studentData.displayName,
+      studentEmail: studentData.email,
+      status: "Pending",
+      dateApplied: serverTimestamp(),
+      employerId: job.employerId,
+    };
 
-        updateRequest.onsuccess = () => {
-          // Update the UI
-          const jobElement = document.querySelector(
-            `.job-item[data-job-id="${jobId}"]`
-          );
-          if (jobElement) {
-            const applicationsCountElement = jobElement.querySelector(
-              ".applications-count"
-            );
-            if (applicationsCountElement) {
-              applicationsCountElement.textContent = `${job.applicationCount} applications`;
-            }
+    // Add application to applications collection
+    await addDoc(collection(db, "applications"), applicationData);
 
-            // Check if apply button was updated in the event handler (direct click)
-            // If not (e.g., in case of programmatic call), update it here
-            const applyButton = jobElement.querySelector(".apply-button");
-            if (applyButton && applyButton.className !== "applied-button") {
-              applyButton.className = "applied-button";
-              applyButton.textContent = "Applied";
-              applyButton.disabled = true;
-            }
-          }
+    // Update job document with new applicant
+    await updateDoc(doc(db, "jobs", job.id), {
+      applicants: arrayUnion(auth.currentUser.uid),
+      applications: increment(1),
+    });
 
-          // Show success notification
-          showNotification("Application submitted successfully!", "success");
-        };
+    showNotification("Application submitted successfully!");
 
-        updateRequest.onerror = (event) => {
-          showNotification(
-            `Error submitting application: ${event.target.error}`,
-            "error"
-          );
-        };
-      } else {
-        showNotification(`Job with ID ${jobId} not found`, "error");
+    // Update UI to show applied status
+    const jobCard = document.querySelector(`[data-job-id="${job.id}"]`);
+    if (jobCard) {
+      const applyBtn = jobCard.querySelector(".apply-btn");
+      if (applyBtn) {
+        applyBtn.disabled = true;
+        applyBtn.textContent = "Applied";
+        applyBtn.classList.add("applied");
       }
-    };
-
-    getRequest.onerror = (event) => {
-      showNotification(`Error fetching job: ${event.target.error}`, "error");
-    };
-  };
-
-  request.onerror = (event) => {
-    showNotification(`Database error: ${event.target.error}`, "error");
-  };
+    }
+  } catch (error) {
+    console.error("Error applying to job:", error);
+    showNotification("Error submitting application: " + error.message, "error");
+  }
 }
 
 /**
- * Update the job count display
+ * Set up search and filter event listeners
+ */
+function setupSearchAndFilters() {
+  const searchInput = document.getElementById("searchInput");
+  const jobTypeFilter = document.getElementById("jobTypeFilter");
+  const workArrangementFilter = document.getElementById(
+    "workArrangementFilter"
+  );
+  const minPayFilter = document.getElementById("minPayFilter");
+  const sortByFilter = document.getElementById("sortByFilter");
+  const clearFiltersBtn = document.getElementById("clearFiltersBtn");
+
+  function applyFilters() {
+    const filters = {
+      searchTerm: searchInput?.value || "",
+      jobType: jobTypeFilter?.value || "",
+      workArrangement: workArrangementFilter?.value || "",
+      minPay: minPayFilter?.value || null,
+    };
+
+    // Reset pagination
+    lastVisible = null;
+
+    // Load jobs with filters
+    loadApprovedJobs(filters);
+  }
+
+  // Debounce function for search input
+  const debounce = (func, delay) => {
+    let debounceTimer;
+    return function () {
+      const context = this;
+      const args = arguments;
+      clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => func.apply(context, args), delay);
+    };
+  };
+
+  // Add event listeners
+  if (searchInput)
+    searchInput.addEventListener("input", debounce(applyFilters, 300));
+  if (jobTypeFilter) jobTypeFilter.addEventListener("change", applyFilters);
+  if (workArrangementFilter)
+    workArrangementFilter.addEventListener("change", applyFilters);
+  if (minPayFilter)
+    minPayFilter.addEventListener("input", debounce(applyFilters, 300));
+  if (sortByFilter) sortByFilter.addEventListener("change", applyFilters);
+  if (clearFiltersBtn) clearFiltersBtn.addEventListener("click", clearFilters);
+}
+
+/**
+ * Clear all filters and reload jobs
+ */
+function clearFilters() {
+  const searchInput = document.getElementById("searchInput");
+  const jobTypeFilter = document.getElementById("jobTypeFilter");
+  const workArrangementFilter = document.getElementById(
+    "workArrangementFilter"
+  );
+  const minPayFilter = document.getElementById("minPayFilter");
+  const sortByFilter = document.getElementById("sortByFilter");
+
+  if (searchInput) searchInput.value = "";
+  if (jobTypeFilter) jobTypeFilter.value = "";
+  if (workArrangementFilter) workArrangementFilter.value = "";
+  if (minPayFilter) minPayFilter.value = "";
+  if (sortByFilter) sortByFilter.value = "date";
+
+  // Reset pagination
+  lastVisible = null;
+
+  // Reload jobs without filters
+  loadApprovedJobs();
+}
+
+/**
+ * Update the job count displayed on the page
  * @param {number} count - The number of jobs to display
  */
 function updateJobCount(count) {
@@ -371,85 +439,71 @@ function updateJobCount(count) {
 }
 
 /**
- * Get work arrangement display info
- * @param {string} arrangement - The work arrangement value
- * @returns {Object} - Information about the work arrangement
- */
-function getWorkArrangementInfo(arrangement) {
-  switch (arrangement) {
-    case "remote":
-      return { text: "Remote" };
-    case "hybrid":
-      return { text: "Hybrid" };
-    case "in-person":
-      return { text: "In-Person" };
-    default:
-      return { text: "Flexible" };
-  }
-}
-
-/**
- * Truncate text to a certain length and add ellipsis
+ * Truncate text to a certain length
  * @param {string} text - The text to truncate
  * @param {number} maxLength - The maximum length
  * @returns {string} - The truncated text
  */
 function truncateText(text, maxLength) {
   if (!text) return "";
-  if (text.length <= maxLength) return text;
-  return text.substring(0, maxLength) + "...";
+  return text.length > maxLength ? text.substring(0, maxLength) + "..." : text;
+}
+
+/**
+ * Format pay range for display
+ * @param {number} min - Minimum pay
+ * @param {number} max - Maximum pay
+ * @returns {string} - Formatted pay range
+ */
+function formatPayRange(min, max) {
+  if (!min && !max) return "Unpaid";
+  if (min && max) return `$${min.toLocaleString()} - $${max.toLocaleString()}`;
+  if (min) return `From $${min.toLocaleString()}`;
+  return `Up to $${max.toLocaleString()}`;
 }
 
 /**
  * Show a notification message
  * @param {string} message - The message to display
- * @param {string} type - The type of notification (success, error)
+ * @param {string} type - Type of notification (success, error, info)
  */
 function showNotification(message, type = "success") {
-  // Check if notification container exists, create if not
-  let notificationContainer = document.getElementById("notificationContainer");
+  const notification = document.createElement("div");
+  notification.className = `notification ${type}`;
 
-  if (!notificationContainer) {
-    notificationContainer = document.createElement("div");
-    notificationContainer.id = "notificationContainer";
-    notificationContainer.style.position = "fixed";
-    notificationContainer.style.top = "20px";
-    notificationContainer.style.right = "20px";
-    notificationContainer.style.zIndex = "1000";
-    document.body.appendChild(notificationContainer);
+  // Set style based on type
+  if (type === "success") {
+    notification.style.backgroundColor = "#dff2bf";
+    notification.style.color = "#4f8a10";
+  } else if (type === "error") {
+    notification.style.backgroundColor = "#ffcccb";
+    notification.style.color = "#d8000c";
+  } else {
+    notification.style.backgroundColor = "#bce8f1";
+    notification.style.color = "#31708f";
   }
 
-  // Create notification element
-  const notification = document.createElement("div");
-  notification.style.backgroundColor =
-    type === "success" ? "#ecfdf5" : "#fef2f2";
-  notification.style.color = type === "success" ? "#047857" : "#b91c1c";
-  notification.style.padding = "16px";
-  notification.style.borderRadius = "8px";
-  notification.style.marginBottom = "12px";
-  notification.style.boxShadow = "0 2px 8px rgba(0, 0, 0, 0.1)";
-  notification.style.display = "flex";
-  notification.style.alignItems = "center";
+  notification.style.padding = "10px 15px";
+  notification.style.margin = "10px 0";
+  notification.style.borderRadius = "4px";
+  notification.style.boxShadow = "0 2px 4px rgba(0,0,0,0.1)";
+  notification.style.position = "fixed";
+  notification.style.bottom = "20px";
+  notification.style.right = "20px";
+  notification.style.zIndex = "1000";
 
-  // Add icon based on type
-  const icon = type === "success" ? "check_circle" : "error";
+  notification.textContent = message;
 
-  notification.innerHTML = `
-    <span class="material-icons" style="margin-right: 8px;">${icon}</span>
-    <span>${message}</span>
-  `;
-
-  // Add to container
-  notificationContainer.appendChild(notification);
+  document.body.appendChild(notification);
 
   // Remove after 3 seconds
   setTimeout(() => {
     notification.style.opacity = "0";
-    notification.style.transition = "opacity 0.5s ease";
+    notification.style.transition = "opacity 0.5s";
 
     setTimeout(() => {
-      if (notification.parentNode === notificationContainer) {
-        notificationContainer.removeChild(notification);
+      if (notification.parentNode) {
+        notification.parentNode.removeChild(notification);
       }
     }, 500);
   }, 3000);

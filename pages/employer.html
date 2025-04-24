@@ -4,6 +4,23 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>CareerBridge - Employer Dashboard</title>
+    <script
+      type="module"
+      src="https://www.gstatic.com/firebasejs/10.1.0/firebase-app.js"
+    ></script>
+    <script
+      type="module"
+      src="https://www.gstatic.com/firebasejs/10.1.0/firebase-auth.js"
+    ></script>
+    <script
+      type="module"
+      src="https://www.gstatic.com/firebasejs/10.1.0/firebase-firestore.js"
+    ></script>
+    <script
+      type="module"
+      src="https://www.gstatic.com/firebasejs/10.1.0/firebase-storage.js"
+    ></script>
+    <script type="module" src="/src/config/firebase.js"></script>
     <link rel="stylesheet" href="../assets/css/employer.css" />
     <link
       href="https://fonts.googleapis.com/icon?family=Material+Icons"
@@ -99,7 +116,6 @@
                   <th>Applicant</th>
                   <th>Position</th>
                   <th>Applied Date</th>
-                  <th>Status</th>
                   <th>Resume</th>
                   <th>Actions</th>
                 </tr>
@@ -109,18 +125,25 @@
                 <tr>
                   <td class="applicant-cell">
                     <div class="applicant-info">
-                      <div class="applicant-avatar">EC</div>
+                      <div
+                        class="applicant-avatar student-profile-trigger"
+                        data-student-id="1"
+                      >
+                        DS
+                      </div>
                       <div>
-                        <p class="applicant-name">Emily Chen</p>
-                        <p class="applicant-email">emily.chen@example.com</p>
+                        <p
+                          class="applicant-name student-profile-trigger"
+                          data-student-id="1"
+                        >
+                          Demo Student
+                        </p>
+                        <p class="applicant-email">student@example.com</p>
                       </div>
                     </div>
                   </td>
                   <td>Frontend Developer</td>
                   <td>April 15, 2025</td>
-                  <td>
-                    <span class="status-badge review">Under Review</span>
-                  </td>
                   <td>
                     <a href="#" class="resume-link">
                       <span class="material-icons">description</span>
@@ -142,9 +165,19 @@
                 <tr>
                   <td class="applicant-cell">
                     <div class="applicant-info">
-                      <div class="applicant-avatar">MZ</div>
+                      <div
+                        class="applicant-avatar student-profile-trigger"
+                        data-student-id="2"
+                      >
+                        MZ
+                      </div>
                       <div>
-                        <p class="applicant-name">Michael Zhang</p>
+                        <p
+                          class="applicant-name student-profile-trigger"
+                          data-student-id="2"
+                        >
+                          Michael Zhang
+                        </p>
                         <p class="applicant-email">michael.zhang@example.com</p>
                       </div>
                     </div>
@@ -152,9 +185,6 @@
                   <td>UI/UX Design Assistant</td>
                   <td>April 18, 2025</td>
                   <td>
-                    <span class="status-badge review">Under Review</span>
-                  </td>
-                  <td>
                     <a href="#" class="resume-link">
                       <span class="material-icons">description</span>
                       View
@@ -175,20 +205,25 @@
                 <tr>
                   <td class="applicant-cell">
                     <div class="applicant-info">
-                      <div class="applicant-avatar">SP</div>
+                      <div
+                        class="applicant-avatar student-profile-trigger"
+                        data-student-id="3"
+                      >
+                        SP
+                      </div>
                       <div>
-                        <p class="applicant-name">Sophia Patel</p>
+                        <p
+                          class="applicant-name student-profile-trigger"
+                          data-student-id="3"
+                        >
+                          Sophia Patel
+                        </p>
                         <p class="applicant-email">sophia.patel@example.com</p>
                       </div>
                     </div>
                   </td>
                   <td>Data Science Intern</td>
                   <td>April 20, 2025</td>
-                  <td>
-                    <span class="status-badge interview"
-                      >Interview Scheduled</span
-                    >
-                  </td>
                   <td>
                     <a href="#" class="resume-link">
                       <span class="material-icons">description</span>
@@ -344,6 +379,73 @@
       </div>
     </div>
 
+    <!-- Student Profile Modal -->
+    <div id="studentProfileModal" class="modal">
+      <div class="modal-content student-profile-modal">
+        <div class="modal-header">
+          <h2>Student Profile</h2>
+          <button class="close-modal" id="closeStudentProfileModal">
+            <span class="material-icons">close</span>
+          </button>
+        </div>
+
+        <div class="modal-body">
+          <div class="student-profile-container">
+            <div class="student-profile-header">
+              <div class="student-avatar-large" id="studentProfileAvatar"></div>
+              <div class="student-basic-info">
+                <h3 id="studentProfileName"></h3>
+                <p id="studentProfileEmail"></p>
+                <p id="studentProfilePhone"></p>
+              </div>
+            </div>
+
+            <div class="student-profile-details">
+              <div class="profile-section">
+                <h4>Education</h4>
+                <div id="studentProfileEducation"></div>
+              </div>
+
+              <div class="profile-section">
+                <h4>Skills</h4>
+                <div id="studentProfileSkills" class="skills-container"></div>
+              </div>
+
+              <div class="profile-section">
+                <h4>Experience</h4>
+                <div id="studentProfileExperience"></div>
+              </div>
+
+              <div class="profile-section">
+                <h4>Projects</h4>
+                <div id="studentProfileProjects"></div>
+              </div>
+
+              <div class="profile-section">
+                <h4>About</h4>
+                <p id="studentProfileAbout"></p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button class="btn secondary-btn" id="closeStudentProfileBtn">
+            Close
+          </button>
+          <a
+            id="studentResumeLink"
+            class="btn primary-btn"
+            href="#"
+            target="_blank"
+          >
+            <span class="material-icons">description</span>
+            View Resume
+          </a>
+        </div>
+      </div>
+    </div>
+
     <!-- Notification -->
     <div id="notification" class="notification">
       <span class="material-icons" id="notificationIcon">check_circle</span>
@@ -432,6 +534,171 @@
           },
         ];
 
+        // Sample student data
+        const students = [
+          {
+            id: 1,
+            name: "Bernard Freund",
+            email: "bernard.freund@example.com",
+            phone: "(650) 555-1234",
+            avatar: "BF",
+            education: [
+              {
+                school: "Cupertino High School",
+                degree: "High School Diploma",
+                gradYear: "2025 (Expected)",
+                gpa: "4.2",
+              },
+            ],
+            skills: [
+              "JavaScript",
+              "React",
+              "HTML",
+              "CSS",
+              "UI/UX Design",
+              "Figma",
+            ],
+            experience: [
+              {
+                title: "Web Development Intern",
+                company: "TechStart Inc.",
+                dates: "Summer 2024",
+                description:
+                  "Assisted in developing responsive web applications using React. Collaborated with senior developers to implement new features and fix bugs.",
+              },
+              {
+                title: "Student Tech Support",
+                company: "Cupertino High School",
+                dates: "2023 - Present",
+                description:
+                  "Provide technical support to students and staff. Troubleshoot hardware and software issues.",
+              },
+            ],
+            projects: [
+              {
+                title: "Personal Portfolio Website",
+                description:
+                  "Designed and developed a responsive portfolio website to showcase my projects and skills.",
+                link: "bernardfreund.portfolio.io",
+              },
+              {
+                title: "Weather App",
+                description:
+                  "Created a weather application using React that fetches real-time weather data from an API.",
+                link: "https://github.com/bernardfreund/weather-app",
+              },
+            ],
+            about:
+              "I'm a senior at Cupertino High School with a passion for computer science and design. I've completed several AP courses including Computer Science A, Calculus BC, and Physics. I'm particularly interested in web development and UI/UX design, and I'm looking for internship opportunities where I can apply my skills while learning from professionals in the tech industry.",
+          },
+          {
+            id: 2,
+            name: "Michael Zhang",
+            email: "michael.zhang@example.com",
+            phone: "(408) 555-5678",
+            avatar: "MZ",
+            education: [
+              {
+                school: "Cupertino High School",
+                degree: "High School Diploma",
+                gradYear: "2025 (Expected)",
+                gpa: "3.9",
+              },
+            ],
+            skills: [
+              "UI/UX Design",
+              "Figma",
+              "Adobe XD",
+              "Sketch",
+              "Prototyping",
+              "HTML/CSS",
+              "User Research",
+            ],
+            experience: [
+              {
+                title: "Design Intern",
+                company: "CreativeHub",
+                dates: "Summer 2024",
+                description:
+                  "Created UI designs for mobile applications. Conducted user research and usability testing to improve design solutions.",
+              },
+            ],
+            projects: [
+              {
+                title: "Food Delivery App Redesign",
+                description:
+                  "Redesigned the user interface for a popular food delivery app to improve user experience and accessibility.",
+                link: "https://behance.net/michaelzhang/foodapp",
+              },
+              {
+                title: "School Club Directory",
+                description:
+                  "Designed and developed a directory website for Cupertino High School clubs to help students discover and join clubs.",
+                link: "https://chsclubs.org",
+              },
+            ],
+            about:
+              "I'm a UI/UX design enthusiast with a keen eye for detail and a passion for creating user-centered designs. I believe in the power of design to solve problems and enhance user experiences. I'm looking for opportunities to apply my design skills in real-world projects.",
+          },
+          {
+            id: 3,
+            name: "Sophia Patel",
+            email: "sophia.patel@example.com",
+            phone: "(415) 555-9012",
+            avatar: "SP",
+            education: [
+              {
+                school: "Cupertino High School",
+                degree: "High School Diploma",
+                gradYear: "2025 (Expected)",
+                gpa: "4.0",
+              },
+            ],
+            skills: [
+              "Python",
+              "Data Analysis",
+              "Machine Learning",
+              "SQL",
+              "Pandas",
+              "NumPy",
+              "Matplotlib",
+              "Statistics",
+            ],
+            experience: [
+              {
+                title: "Research Assistant",
+                company: "Stanford AI Lab",
+                dates: "Summer 2024",
+                description:
+                  "Assisted researchers in collecting and analyzing data for machine learning projects. Implemented data preprocessing pipelines and visualization tools.",
+              },
+              {
+                title: "Math Tutor",
+                company: "Mathnasium",
+                dates: "2023 - Present",
+                description:
+                  "Tutor middle and high school students in various math subjects including algebra, geometry, and calculus.",
+              },
+            ],
+            projects: [
+              {
+                title: "COVID-19 Data Analysis",
+                description:
+                  "Analyzed COVID-19 data to identify trends and patterns. Created visualizations to communicate findings effectively.",
+                link: "https://github.com/sophiapatel/covid-analysis",
+              },
+              {
+                title: "Predictive Model for Student Performance",
+                description:
+                  "Developed a machine learning model to predict student performance based on various factors including study habits and previous grades.",
+                link: "https://github.com/sophiapatel/student-performance",
+              },
+            ],
+            about:
+              "I'm passionate about using data science to solve real-world problems. I enjoy working with data, finding patterns, and extracting meaningful insights. I'm particularly interested in the applications of machine learning in healthcare and education.",
+          },
+        ];
+
         // Elements
         const jobListings = document.getElementById("jobListings");
         const pagination = document.getElementById("pagination");
@@ -445,6 +712,9 @@
         const jobSearchInput = document.getElementById("jobSearchInput");
         const jobTypeFilter = document.getElementById("jobTypeFilter");
         const arrangementFilter = document.getElementById("arrangementFilter");
+        const studentProfileModal = document.getElementById(
+          "studentProfileModal"
+        );
 
         // State variables
         let currentJobs = [...jobs];
@@ -455,6 +725,7 @@
 
         // Initialize
         renderJobs();
+        setupStudentProfileTriggers();
 
         // Event Listeners
         // Search and filters
@@ -487,6 +758,12 @@
         document
           .getElementById("cancelDeleteBtn")
           .addEventListener("click", closeDeleteModal);
+        document
+          .getElementById("closeStudentProfileModal")
+          .addEventListener("click", closeStudentProfileModal);
+        document
+          .getElementById("closeStudentProfileBtn")
+          .addEventListener("click", closeStudentProfileModal);
 
         // Close modals when clicking outside
         window.addEventListener("click", function (event) {
@@ -495,6 +772,9 @@
           }
           if (event.target === deleteModal) {
             closeDeleteModal();
+          }
+          if (event.target === studentProfileModal) {
+            closeStudentProfileModal();
           }
         });
 
@@ -517,6 +797,108 @@
         });
 
         // Functions
+        function setupStudentProfileTriggers() {
+          document
+            .querySelectorAll(".student-profile-trigger")
+            .forEach((element) => {
+              element.addEventListener("click", function () {
+                const studentId = parseInt(
+                  this.getAttribute("data-student-id")
+                );
+                showStudentProfile(studentId);
+              });
+            });
+        }
+
+        function showStudentProfile(studentId) {
+          const student = students.find((s) => s.id === studentId);
+          if (!student) return;
+
+          // Fill in student profile data
+          document.getElementById("studentProfileName").textContent =
+            student.name;
+          document.getElementById("studentProfileEmail").textContent =
+            student.email;
+          document.getElementById("studentProfilePhone").textContent =
+            student.phone;
+          document.getElementById("studentProfileAvatar").textContent =
+            student.avatar;
+          document.getElementById("studentProfileAbout").textContent =
+            student.about;
+
+          // Education
+          const educationContainer = document.getElementById(
+            "studentProfileEducation"
+          );
+          educationContainer.innerHTML = "";
+          student.education.forEach((edu) => {
+            const eduElement = document.createElement("div");
+            eduElement.className = "education-item";
+            eduElement.innerHTML = `
+              <h5>${edu.school}</h5>
+              <p>${edu.degree} - ${edu.gradYear}</p>
+              <p>GPA: ${edu.gpa}</p>
+            `;
+            educationContainer.appendChild(eduElement);
+          });
+
+          // Skills
+          const skillsContainer = document.getElementById(
+            "studentProfileSkills"
+          );
+          skillsContainer.innerHTML = "";
+          student.skills.forEach((skill) => {
+            const skillElement = document.createElement("span");
+            skillElement.className = "skill-tag";
+            skillElement.textContent = skill;
+            skillsContainer.appendChild(skillElement);
+          });
+
+          // Experience
+          const experienceContainer = document.getElementById(
+            "studentProfileExperience"
+          );
+          experienceContainer.innerHTML = "";
+          student.experience.forEach((exp) => {
+            const expElement = document.createElement("div");
+            expElement.className = "experience-item";
+            expElement.innerHTML = `
+              <h5>${exp.title}</h5>
+              <p>${exp.company} | ${exp.dates}</p>
+              <p>${exp.description}</p>
+            `;
+            experienceContainer.appendChild(expElement);
+          });
+
+          // Projects
+          const projectsContainer = document.getElementById(
+            "studentProfileProjects"
+          );
+          projectsContainer.innerHTML = "";
+          student.projects.forEach((project) => {
+            const projectElement = document.createElement("div");
+            projectElement.className = "project-item";
+            projectElement.innerHTML = `
+              <h5>${project.title}</h5>
+              <p>${project.description}</p>
+              <a href="${project.link}" target="_blank">View Project</a>
+            `;
+            projectsContainer.appendChild(projectElement);
+          });
+
+          // Set resume link (dummy link for now)
+          document.getElementById(
+            "studentResumeLink"
+          ).href = `#resume-${studentId}`;
+
+          // Show modal
+          studentProfileModal.classList.add("show");
+        }
+
+        function closeStudentProfileModal() {
+          studentProfileModal.classList.remove("show");
+        }
+
         function applyFilters() {
           const searchTerm = jobSearchInput.value.toLowerCase();
           const jobType = jobTypeFilter.value;

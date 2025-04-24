@@ -1,0 +1,12 @@
+specVersion: "v1"
+serviceId: "fbla-website-coding"
+location: "us-central1"
+schema:
+  source: "./schema"
+  datasource:
+    postgresql:
+      database: "fdcdb"
+      cloudSql:
+        instanceId: "fbla-website-coding-fdc"
+      # schemaValidation: "COMPATIBLE"
+connectorDirs: ["./connector"]

@@ -5,8 +5,206 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Cupertino High School Employer - Login</title>
     <link rel="stylesheet" href="../assets/css/login.css" />
+    <script
+      type="module"
+      src="https://www.gstatic.com/firebasejs/10.1.0/firebase-app.js"
+    ></script>
+    <script
+      type="module"
+      src="https://www.gstatic.com/firebasejs/10.1.0/firebase-auth.js"
+    ></script>
+    <script
+      type="module"
+      src="https://www.gstatic.com/firebasejs/10.1.0/firebase-firestore.js"
+    ></script>
+    <script
+      type="module"
+      src="https://www.gstatic.com/firebasejs/10.1.0/firebase-storage.js"
+    ></script>
+    <script type="module" src="/src/config/firebase.js"></script>
     <!-- Google API Client Library -->
     <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <!-- Firebase -->
+    <script type="module">
+      import { initializeApp } from "https://www.gstatic.com/firebasejs/10.1.0/firebase-app.js";
+      import {
+        getAuth,
+        signInWithEmailAndPassword,
+        createUserWithEmailAndPassword,
+        GoogleAuthProvider,
+        signInWithPopup,
+      } from "https://www.gstatic.com/firebasejs/10.1.0/firebase-auth.js";
+      import {
+        getFirestore,
+        doc,
+        getDoc,
+        setDoc,
+        serverTimestamp,
+      } from "https://www.gstatic.com/firebasejs/10.1.0/firebase-firestore.js";
+
+      const firebaseConfig = {
+        apiKey: "AIzaSyC4sQLKfdgbdu6y6nWNJrcchMpMNQO63Gk",
+        authDomain: "careerbridge-cb089.firebaseapp.com",
+        projectId: "careerbridge-cb089",
+        storageBucket: "careerbridge-cb089.firebasestorage.app",
+        messagingSenderId: "501798299971",
+        appId: "1:501798299971:web:c6dc069231964655a327f6",
+        measurementId: "G-GTLJ5GX7HK",
+      };
+
+      // Initialize Firebase
+      const app = initializeApp(firebaseConfig);
+      const auth = getAuth(app);
+      const db = getFirestore(app);
+
+      // Handle login form submission
+      document.addEventListener("DOMContentLoaded", () => {
+        const loginForm = document.querySelector("form");
+        loginForm.addEventListener("submit", async (e) => {
+          e.preventDefault();
+
+          const email = document.getElementById("email").value;
+          const password = document.getElementById("password").value;
+
+          // Check for hardcoded credentials first
+          if (email === "employer@example.com" && password === "employer") {
+            // Create a custom user object for hardcoded employer
+            const user = {
+              uid: "hardcoded-employer-uid",
+              email: "employer@example.com",
+              displayName: "Demo Employer",
+            };
+
+            try {
+              // Check if user exists in Firestore
+              const userDoc = await getDoc(doc(db, "users", user.uid));
+
+              if (!userDoc.exists()) {
+                // Create user document if it doesn't exist
+                await setDoc(doc(db, "users", user.uid), {
+                  uid: user.uid,
+                  email: user.email,
+                  displayName: "Demo Employer",
+                  role: "employer",
+                  createdAt: serverTimestamp(),
+                });
+              }
+
+              // Store user in localStorage to maintain session
+              localStorage.setItem("currentUser", JSON.stringify(user));
+
+              // Redirect to employer dashboard
+              window.location.href = "employer.html";
+              return;
+            } catch (error) {
+              console.error("Error with hardcoded login:", error);
+            }
+          }
+
+          try {
+            // Sign in with email and password
+            const userCredential = await signInWithEmailAndPassword(
+              auth,
+              email,
+              password
+            );
+            const user = userCredential.user;
+
+            // Check if user exists in Firestore
+            const userDoc = await getDoc(doc(db, "users", user.uid));
+
+            if (!userDoc.exists()) {
+              // Create user document if it doesn't exist
+              await setDoc(doc(db, "users", user.uid), {
+                uid: user.uid,
+                email: user.email,
+                role: "employer",
+                createdAt: serverTimestamp(),
+              });
+            } else if (userDoc.data().role !== "employer") {
+              alert(
+                "This account is not registered as an employer. Please use a different account."
+              );
+              await auth.signOut();
+              return;
+            }
+
+            // Redirect to employer dashboard
+            window.location.href = "employer.html";
+          } catch (error) {
+            console.error("Login error:", error);
+            alert("Login failed: " + error.message);
+          }
+        });
+
+        // Handle Google sign-in
+        const googleBtn = document.querySelector(".google-btn");
+        googleBtn.addEventListener("click", async () => {
+          const provider = new GoogleAuthProvider();
+
+          try {
+            const result = await signInWithPopup(auth, provider);
+            const user = result.user;
+
+            // Check if user exists in Firestore
+            const userDoc = await getDoc(doc(db, "users", user.uid));
+
+            if (!userDoc.exists()) {
+              // Create user document if it doesn't exist
+              await setDoc(doc(db, "users", user.uid), {
+                uid: user.uid,
+                email: user.email,
+                displayName: user.displayName || "",
+                photoURL: user.photoURL || "",
+                role: "employer",
+                createdAt: serverTimestamp(),
+              });
+            } else if (userDoc.data().role !== "employer") {
+              alert(
+                "This account is already registered with a different role. Please use a different account."
+              );
+              await auth.signOut();
+              return;
+            }
+
+            // Redirect to employer dashboard
+            window.location.href = "employer.html";
+          } catch (error) {
+            console.error("Google sign-in error:", error);
+            alert("Google sign-in failed: " + error.message);
+          }
+        });
+
+        // Add demo banner if applicable
+        addDemoBanner();
+      });
+
+      // Add demo banner function
+      function addDemoBanner() {
+        const hardcodedUser = localStorage.getItem("currentUser");
+        if (hardcodedUser) {
+          const banner = document.createElement("div");
+          banner.style.backgroundColor = "#ffc107";
+          banner.style.color = "#212529";
+          banner.style.padding = "5px 0";
+          banner.style.textAlign = "center";
+          banner.style.fontSize = "14px";
+          banner.style.fontWeight = "bold";
+          banner.style.position = "fixed";
+          banner.style.top = "0";
+          banner.style.left = "0";
+          banner.style.width = "100%";
+          banner.style.zIndex = "1000";
+          banner.textContent =
+            "You are using a demo account. Some features may be limited.";
+
+          document.body.insertBefore(banner, document.body.firstChild);
+
+          // Add spacing to prevent content from being hidden under banner
+          document.body.style.paddingTop = "30px";
+        }
+      }
+    </script>
     <style>
       .back-button {
         position: absolute;
@@ -60,52 +258,42 @@
           Sign in with Google
         </button>
 
-        <!-- The actual Google Sign-In component would be rendered here in production -->
-        <div
-          id="g_id_onload"
-          data-client_id="YOUR_GOOGLE_CLIENT_ID"
-          data-context="signin"
-          data-ux_mode="popup"
-          data-callback="handleCredentialResponse"
-          data-auto_prompt="false"
-          style="display: none"
-        ></div>
-      </div>
-
-      <div class="divider">
-        <span>or continue with email</span>
-      </div>
-
-      <form>
-        <div class="form-group">
-          <label for="email">Business Email</label>
-          <input
-            type="email"
-            id="email"
-            placeholder="your.name@company.com"
-            required
-          />
+        <div class="divider">
+          <span>or continue with email</span>
         </div>
 
-        <div class="form-group">
-          <label for="password">Password</label>
-          <input
-            type="password"
-            id="password"
-            placeholder="Enter your password"
-            required
-          />
+        <form>
+          <div class="form-group">
+            <label for="email">Business Email</label>
+            <input
+              type="email"
+              id="email"
+              placeholder="your.name@company.com"
+              required
+            />
+          </div>
+
+          <div class="form-group">
+            <label for="password">Password</label>
+            <input
+              type="password"
+              id="password"
+              placeholder="Enter your password"
+              required
+            />
+          </div>
+
+          <div class="forgot-password">
+            <a href="#">Forgot password?</a>
+          </div>
+
+          <button type="submit" class="login-button">Log In</button>
+        </form>
+
+        <div class="signup-link">
+          New to CareerBridge?
+          <a href="#" id="registerCompany">Register your company</a>
         </div>
-
-        <div class="forgot-password">
-          <a href="#">Forgot password?</a>
-        </div>
-
-        <a href="employer.html" class="login-button">Log In</a>
-      </form>
-
-      <div class="signup-link">
-        New to CareerBridge?<a href="#">Register your company</a>
       </div>
     </div>
   </body>

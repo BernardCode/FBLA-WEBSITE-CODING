@@ -5,9 +5,102 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Cupertino High School Student - Login</title>
   <link rel="stylesheet" href="../assets/css/login.css" />
+  <script type="module" src="https://www.gstatic.com/firebasejs/10.1.0/firebase-app.js"></script>
+<script type="module" src="https://www.gstatic.com/firebasejs/10.1.0/firebase-auth.js"></script>
+<script type="module" src="https://www.gstatic.com/firebasejs/10.1.0/firebase-firestore.js"></script>
+<script type="module" src="https://www.gstatic.com/firebasejs/10.1.0/firebase-storage.js"></script>
+<script type="module" src="/src/config/firebase.js"></script>
   <!-- Google API Client Library -->
   <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <!-- Firebase -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.1.0/firebase-app.js";
+    import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/10.1.0/firebase-auth.js";
+    import { getFirestore, doc, getDoc, setDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.1.0/firebase-firestore.js";
 
+    const firebaseConfig = {
+      apiKey: "AIzaSyC4sQLKfdgbdu6y6nWNJrcchMpMNQO63Gk",
+      authDomain: "careerbridge-cb089.firebaseapp.com",
+      projectId: "careerbridge-cb089",
+      storageBucket: "careerbridge-cb089.firebasestorage.app",
+      messagingSenderId: "501798299971",
+      appId: "1:501798299971:web:c6dc069231964655a327f6",
+      measurementId: "G-GTLJ5GX7HK"
+    };
+
+    // Initialize Firebase
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    // Handle login form submission
+    document.addEventListener('DOMContentLoaded', () => {
+      const loginForm = document.querySelector('form');
+      loginForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const email = document.getElementById('email').value;
+        const password = document.getElementById('password').value;
+        
+        try {
+          // Sign in with email and password
+          const userCredential = await signInWithEmailAndPassword(auth, email, password);
+          const user = userCredential.user;
+          
+          // Check if user exists in Firestore
+          const userDoc = await getDoc(doc(db, "users", user.uid));
+          
+          if (!userDoc.exists()) {
+            // Create user document if it doesn't exist
+            await setDoc(doc(db, "users", user.uid), {
+              uid: user.uid,
+              email: user.email,
+              role: "student",
+              createdAt: serverTimestamp()
+            });
+          }
+          
+          // Redirect to jobs page
+          window.location.href = "jobs.html";
+        } catch (error) {
+          console.error("Login error:", error);
+          alert("Login failed: " + error.message);
+        }
+      });
+      
+      // Handle Google sign-in
+      const googleBtn = document.querySelector('.google-btn');
+      googleBtn.addEventListener('click', async () => {
+        const provider = new GoogleAuthProvider();
+        
+        try {
+          const result = await signInWithPopup(auth, provider);
+          const user = result.user;
+          
+          // Check if user exists in Firestore
+          const userDoc = await getDoc(doc(db, "users", user.uid));
+          
+          if (!userDoc.exists()) {
+            // Create user document if it doesn't exist
+            await setDoc(doc(db, "users", user.uid), {
+              uid: user.uid,
+              email: user.email,
+              displayName: user.displayName || "",
+              photoURL: user.photoURL || "",
+              role: "student",
+              createdAt: serverTimestamp()
+            });
+          }
+          
+          // Redirect to jobs page
+          window.location.href = "jobs.html";
+        } catch (error) {
+          console.error("Google sign-in error:", error);
+          alert("Google sign-in failed: " + error.message);
+        }
+      });
+    });
+  </script>
 </head>
 <body>
 <div class="background"></div>
@@ -27,8 +120,6 @@
     <h2>Welcome back</h2>
     <p>Log in to find your next opportunity</p>
   </div>
-
-
 
   <!-- Google Sign-In Button -->
   <div class="google-signin-container">
@@ -70,11 +161,11 @@
         <a href="#">Forgot password?</a>
       </div>
 
-      <a href="jobs.html" class="login-button">Log In</a>
+      <button type="submit" class="login-button">Log In</button>
     </form>
 
     <div class="signup-link">
-      New to CareerBridge?<a href="#">Create an account</a>
+      New to CareerBridge? <a href="#" id="createAccount">Create an account</a>
     </div>
   </div>
 </body>

@@ -1,708 +1,1649 @@
-// Modal handling functions
-function openModal(modalId) {
+// Import Firebase
+import { db, auth, storage } from "../src/config/firebase.js";
+import {
+  doc,
+  getDoc,
+  setDoc,
+  updateDoc,
+  collection,
+  addDoc,
+  getDocs,
+  query,
+  where,
+  deleteDoc,
+  serverTimestamp,
+} from "firebase/firestore";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+
+// Global user data
+let userData = null;
+
+// Wait for DOM to be fully loaded before adding event listeners
+document.addEventListener("DOMContentLoaded", async () => {
+  // Check if user is logged in
+  auth.onAuthStateChanged(async (user) => {
+    if (!user) {
+      window.location.href = "student-login.html";
+      return;
+    }
+
+    // Load user profile
+    await loadUserProfile(user);
+
+    // Set up event listeners
+    setupProfileEventListeners();
+  });
+});
+
+/**
+ * Load user profile data from Firestore
+ * @param {Object} user - The authenticated user
+ */
+async function loadUserProfile(user) {
+  try {
+    // Get user data
+    const userDoc = await getDoc(doc(db, "users", user.uid));
+
+    if (!userDoc.exists()) {
+      // Create a basic profile if user doesn't have one
+      userData = {
+        uid: user.uid,
+        email: user.email,
+        displayName: user.displayName || "",
+        photoURL: user.photoURL || "",
+        role: "student",
+        createdAt: serverTimestamp(),
+      };
+
+      await setDoc(doc(db, "users", user.uid), userData);
+    } else {
+      userData = userDoc.data();
+    }
+
+    // Update UI with user data
+    updateProfileUI(userData);
+
+    // Load education entries
+    await loadEducation();
+
+    // Load experience entries
+    await loadExperience();
+
+    // Load projects
+    await loadProjects();
+
+    // Load accomplishments
+    await loadAccomplishments();
+
+    // Update profile completion percentage
+    updateProfileCompletion();
+  } catch (error) {
+    console.error("Error loading profile:", error);
+    showNotification("Error loading profile: " + error.message, "error");
+  }
+}
+
+/**
+ * Update the profile UI with user data
+ * @param {Object} data - The user data
+ */
+function updateProfileUI(data) {
+  // Basic profile info
+  const nameElements = document.querySelectorAll(".student-name");
+  nameElements.forEach((el) => {
+    el.textContent = data.displayName || data.email;
+  });
+
+  const headlineEl = document.querySelector(".student-headline");
+  if (headlineEl) {
+    headlineEl.textContent =
+      data.headline || "Student at Cupertino High School";
+  }
+
+  // Profile picture
+  const avatarImgs = document.querySelectorAll(".profile-avatar img");
+  avatarImgs.forEach((img) => {
+    img.src = data.photoURL || "../assets/img/img.png";
+  });
+
+  // About section
+  const aboutText = document.querySelector(".about-text");
+  if (aboutText) {
+    aboutText.textContent = data.about || "No information provided yet.";
+  }
+
+  // Contact info
+  const emailValue = document.querySelector(
+    ".contact-item:nth-child(1) .contact-value"
+  );
+  if (emailValue) {
+    emailValue.textContent = data.email;
+  }
+
+  const phoneValue = document.querySelector(
+    ".contact-item:nth-child(2) .contact-value"
+  );
+  if (phoneValue) {
+    phoneValue.textContent = data.phone || "***-***-****";
+  }
+
+  const locationValue = document.querySelector(
+    ".contact-item:nth-child(3) .contact-value"
+  );
+  if (locationValue) {
+    locationValue.textContent = data.location || "Cupertino, CA";
+  }
+
+  const linkedinValue = document.querySelector(
+    ".contact-item:nth-child(4) .contact-value"
+  );
+  if (linkedinValue) {
+    linkedinValue.textContent = data.linkedin || "linkedin.com/in/studentname";
+  }
+
+  const websiteValue = document.querySelector(
+    ".contact-item:nth-child(5) .contact-value"
+  );
+  if (websiteValue) {
+    websiteValue.textContent = data.website || "studentname.portfolio.io";
+  }
+}
+
+/**
+ * Calculate and update profile completion percentage
+ */
+function updateProfileCompletion() {
+  // Calculate profile completion percentage
+  const requiredFields = [
+    "displayName",
+    "headline",
+    "photoURL",
+    "about",
+    "phone",
+    "location",
+    "linkedin",
+    "website",
+  ];
+
+  let completed = 0;
+  requiredFields.forEach((field) => {
+    if (userData[field]) completed++;
+  });
+
+  // Check if education, experience, and skills are added
+  const hasEducation = document.querySelector(".education-card") !== null;
+  const hasExperience = document.querySelector(".experience-card") !== null;
+  const hasSkills = document.querySelector(".skill-tag") !== null;
+
+  if (hasEducation) completed++;
+  if (hasExperience) completed++;
+  if (hasSkills) completed++;
+
+  const totalFields = requiredFields.length + 3; // +3 for education, experience, skills
+  const percentage = Math.round((completed / totalFields) * 100);
+
+  // Update UI
+  const progressBar = document.querySelector(".completion-progress");
+  if (progressBar) {
+    progressBar.style.width = `${percentage}%`;
+  }
+
+  const completionText = document.querySelector(".completion-text");
+  if (completionText) {
+    completionText.textContent = `Profile ${percentage}% Complete`;
+  }
+}
+
+/**
+ * Load education entries from Firestore
+ */
+async function loadEducation() {
+  try {
+    const q = query(
+      collection(db, "education"),
+      where("studentId", "==", auth.currentUser.uid)
+    );
+
+    const querySnapshot = await getDocs(q);
+
+    // Clear existing education cards
+    const educationSection = document
+      .querySelector(".education-card")
+      ?.closest(".content-section");
+    if (educationSection) {
+      const cardGrid = educationSection.querySelector(".card-grid");
+      if (cardGrid) {
+        // Keep the grid but clear its contents
+        cardGrid.innerHTML = "";
+      } else {
+        // Create card grid if it doesn't exist
+        const addButton = educationSection.querySelector(".add-new-button");
+        if (addButton) {
+          addButton.insertAdjacentHTML(
+            "beforebegin",
+            '<div class="card-grid"></div>'
+          );
+        }
+      }
+    }
+
+    if (querySnapshot.empty) {
+      return;
+    }
+
+    // Get card grid
+    const cardGrid = educationSection.querySelector(".card-grid");
+
+    // Add education cards
+    querySnapshot.forEach((doc) => {
+      const education = { id: doc.id, ...doc.data() };
+      const educationCard = createEducationCard(education);
+      cardGrid.appendChild(educationCard);
+    });
+  } catch (error) {
+    console.error("Error loading education:", error);
+    showNotification("Error loading education data.", "error");
+  }
+}
+
+/**
+ * Create an education card element
+ * @param {Object} education - The education data
+ * @returns {HTMLElement} - The education card element
+ */
+function createEducationCard(education) {
+  const card = document.createElement("div");
+  card.className = "education-card";
+  card.setAttribute("data-id", education.id);
+
+  card.innerHTML = `
+    <div class="card-header">
+      <div class="card-logo"><i class="fas fa-school"></i></div>
+      <div class="card-title-group">
+        <h3 class="card-title">${education.school}</h3>
+        <p class="card-subtitle">${education.degree || ""}</p>
+      </div>
+      <button class="remove-button" onclick="removeEducation('${
+        education.id
+      }')" aria-label="Remove education">×</button>
+    </div>
+    <div class="card-meta">
+      ${
+        education.startDate && education.endDate
+          ? `<span>${education.startDate} - ${education.endDate}</span>`
+          : ""
+      }
+      ${education.gpa ? `<span>GPA: ${education.gpa}</span>` : ""}
+    </div>
+    ${
+      education.description
+        ? `<p class="card-description">${education.description}</p>`
+        : ""
+    }
+  `;
+
+  return card;
+}
+
+/**
+ * Load experience entries from Firestore
+ */
+async function loadExperience() {
+  try {
+    const q = query(
+      collection(db, "experience"),
+      where("studentId", "==", auth.currentUser.uid)
+    );
+
+    const querySnapshot = await getDocs(q);
+
+    // Clear existing experience cards
+    const experienceSection = document
+      .querySelector(".experience-card")
+      ?.closest(".content-section");
+    if (experienceSection) {
+      const cardGrid = experienceSection.querySelector(".card-grid");
+      if (cardGrid) {
+        // Keep the grid but clear its contents
+        cardGrid.innerHTML = "";
+      } else {
+        // Create card grid if it doesn't exist
+        const addButton = experienceSection.querySelector(".add-new-button");
+        if (addButton) {
+          addButton.insertAdjacentHTML(
+            "beforebegin",
+            '<div class="card-grid"></div>'
+          );
+        }
+      }
+    }
+
+    if (querySnapshot.empty) {
+      return;
+    }
+
+    // Get card grid
+    const cardGrid = experienceSection.querySelector(".card-grid");
+
+    // Add experience cards
+    querySnapshot.forEach((doc) => {
+      const experience = { id: doc.id, ...doc.data() };
+      const experienceCard = createExperienceCard(experience);
+      cardGrid.appendChild(experienceCard);
+    });
+  } catch (error) {
+    console.error("Error loading experience:", error);
+    showNotification("Error loading experience data.", "error");
+  }
+}
+
+/**
+ * Create an experience card element
+ * @param {Object} experience - The experience data
+ * @returns {HTMLElement} - The experience card element
+ */
+function createExperienceCard(experience) {
+  const card = document.createElement("div");
+  card.className = "experience-card";
+  card.setAttribute("data-id", experience.id);
+
+  // Determine logo content
+  let logoContent = "";
+  if (experience.logoUrl) {
+    logoContent = `<img src="${experience.logoUrl}" alt="${experience.company} Logo" onerror="this.onerror=null; this.parentElement.innerHTML='<i class=\\'fas fa-building\\'></i>';" />`;
+  } else {
+    logoContent = '<i class="fas fa-building"></i>';
+  }
+
+  card.innerHTML = `
+    <div class="card-header">
+      <div class="card-logo">${logoContent}</div>
+      <div class="card-title-group">
+        <h3 class="card-title">${experience.title}</h3>
+        <p class="card-subtitle">${experience.company}</p>
+      </div>
+      <button class="remove-button" onclick="removeExperience('${
+        experience.id
+      }')" aria-label="Remove experience">×</button>
+    </div>
+    <div class="card-meta">
+      ${
+        experience.startDate && experience.endDate
+          ? `<span>${experience.startDate} - ${experience.endDate}</span>`
+          : ""
+      }
+      ${experience.location ? `<span>${experience.location}</span>` : ""}
+    </div>
+    ${
+      experience.description
+        ? `<p class="card-description">${experience.description}</p>`
+        : ""
+    }
+  `;
+
+  return card;
+}
+
+/**
+ * Load projects from Firestore
+ */
+async function loadProjects() {
+  try {
+    const q = query(
+      collection(db, "projects"),
+      where("studentId", "==", auth.currentUser.uid)
+    );
+
+    const querySnapshot = await getDocs(q);
+
+    // Find or identify the projects section
+    const projectsSection =
+      document.querySelector(".project-card")?.closest(".content-section") ||
+      Array.from(document.querySelectorAll(".section-title"))
+        .find((el) => el.textContent.includes("Projects"))
+        ?.closest(".content-section");
+
+    if (!projectsSection) {
+      return;
+    }
+
+    // Clear existing project cards
+    const cardGrid = projectsSection.querySelector(".card-grid");
+    if (cardGrid) {
+      cardGrid.innerHTML = "";
+    } else {
+      // Create card grid if it doesn't exist
+      const addButton = projectsSection.querySelector(".add-new-button");
+      if (addButton) {
+        addButton.insertAdjacentHTML(
+          "beforebegin",
+          '<div class="card-grid"></div>'
+        );
+      }
+    }
+
+    if (querySnapshot.empty) {
+      return;
+    }
+
+    // Get card grid (defined after potentially creating it)
+    const projectCardGrid = projectsSection.querySelector(".card-grid");
+
+    // Add project cards
+    querySnapshot.forEach((doc) => {
+      const project = { id: doc.id, ...doc.data() };
+      const projectCard = createProjectCard(project);
+      projectCardGrid.appendChild(projectCard);
+    });
+  } catch (error) {
+    console.error("Error loading projects:", error);
+    showNotification("Error loading project data.", "error");
+  }
+}
+
+/**
+ * Create a project card element
+ * @param {Object} project - The project data
+ * @returns {HTMLElement} - The project card element
+ */
+function createProjectCard(project) {
+  const card = document.createElement("div");
+  card.className = "project-card";
+  card.setAttribute("data-id", project.id);
+
+  // Determine icon
+  const icon = project.icon || "fas fa-code";
+
+  card.innerHTML = `
+    <div class="card-header">
+      <div class="card-logo"><i class="${icon}"></i></div>
+      <div class="card-title-group">
+        <h3 class="card-title">${project.name}</h3>
+        <p class="card-subtitle">${project.type || ""}</p>
+      </div>
+      <button class="remove-button" onclick="removeProject('${
+        project.id
+      }')" aria-label="Remove project">×</button>
+    </div>
+    <div class="card-meta">
+      ${
+        project.startDate && project.endDate
+          ? `<span>${project.startDate} - ${project.endDate}</span>`
+          : ""
+      }
+      ${
+        project.link
+          ? `<span><a href="${project.link}" target="_blank" rel="noopener noreferrer" style="color: inherit;">Project Link</a></span>`
+          : ""
+      }
+    </div>
+    ${
+      project.description
+        ? `<p class="card-description">${project.description}</p>`
+        : ""
+    }
+  `;
+
+  return card;
+}
+
+/**
+ * Load accomplishments from Firestore
+ */
+async function loadAccomplishments() {
+  try {
+    const q = query(
+      collection(db, "accomplishments"),
+      where("studentId", "==", auth.currentUser.uid)
+    );
+
+    const querySnapshot = await getDocs(q);
+
+    // Find accomplishments section
+    const accomplishmentsSection =
+      document
+        .querySelector(".accomplishment-card")
+        ?.closest(".content-section") ||
+      Array.from(document.querySelectorAll(".section-title"))
+        .find((el) => el.textContent.includes("Accomplishments"))
+        ?.closest(".content-section");
+
+    if (!accomplishmentsSection) {
+      return;
+    }
+
+    // Clear existing accomplishment cards (except the add button)
+    const accomplishmentCards = accomplishmentsSection.querySelectorAll(
+      ".accomplishment-card"
+    );
+    accomplishmentCards.forEach((card) => card.remove());
+
+    if (querySnapshot.empty) {
+      return;
+    }
+
+    // Add accomplishment cards before the add button
+    const addButton = accomplishmentsSection.querySelector(".add-new-button");
+
+    querySnapshot.forEach((doc) => {
+      const accomplishment = { id: doc.id, ...doc.data() };
+      const accomplishmentCard = createAccomplishmentCard(accomplishment);
+
+      if (addButton) {
+        addButton.insertAdjacentElement("beforebegin", accomplishmentCard);
+      } else {
+        accomplishmentsSection.appendChild(accomplishmentCard);
+      }
+    });
+  } catch (error) {
+    console.error("Error loading accomplishments:", error);
+    showNotification("Error loading accomplishment data.", "error");
+  }
+}
+
+/**
+ * Create an accomplishment card element
+ * @param {Object} accomplishment - The accomplishment data
+ * @returns {HTMLElement} - The accomplishment card element
+ */
+function createAccomplishmentCard(accomplishment) {
+  const card = document.createElement("div");
+  card.className = "accomplishment-card";
+  card.setAttribute("data-id", accomplishment.id);
+
+  card.innerHTML = `
+    <button class="remove-button" onclick="removeAccomplishment('${
+      accomplishment.id
+    }')" aria-label="Remove accomplishment">×</button>
+    <h3 class="accomplishment-title">${accomplishment.title}</h3>
+    <p class="accomplishment-date">${accomplishment.date || ""}</p>
+    ${
+      accomplishment.description
+        ? `<p class="accomplishment-description">${accomplishment.description}</p>`
+        : ""
+    }
+  `;
+
+  return card;
+}
+
+/**
+ * Set up event listeners for the profile page
+ */
+function setupProfileEventListeners() {
+  // Profile picture upload
+  setupProfilePictureUpload();
+
+  // Resume upload
+  setupResumeUpload();
+
+  // Modal buttons
+  setupModalButtons();
+
+  // Inline editing for profile info
+  setupInlineEditing();
+}
+
+/**
+ * Set up profile picture upload
+ */
+function setupProfilePictureUpload() {
+  const avatarUpload = document.querySelector(".avatar-upload");
+  if (!avatarUpload) return;
+
+  avatarUpload.addEventListener("click", () => {
+    // Create file input if it doesn't exist
+    let fileInput = document.getElementById("profile-pic-input");
+    if (!fileInput) {
+      fileInput = document.createElement("input");
+      fileInput.type = "file";
+      fileInput.accept = "image/*";
+      fileInput.id = "profile-pic-input";
+      fileInput.style.display = "none";
+      document.body.appendChild(fileInput);
+
+      fileInput.addEventListener("change", uploadProfilePicture);
+    }
+
+    fileInput.click();
+  });
+}
+
+/**
+ * Upload profile picture to Firebase Storage
+ * @param {Event} event - The file input change event
+ */
+async function uploadProfilePicture(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  try {
+    // Show loading state
+    const avatarUploadBtn = document.querySelector(".avatar-upload");
+    if (avatarUploadBtn) {
+      avatarUploadBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+      avatarUploadBtn.style.pointerEvents = "none";
+    }
+
+    // Upload to Firebase Storage
+    const storageRef = ref(storage, `profile_images/${auth.currentUser.uid}`);
+    await uploadBytes(storageRef, file);
+
+    // Get download URL
+    const photoURL = await getDownloadURL(storageRef);
+
+    // Update user document
+    await updateDoc(doc(db, "users", auth.currentUser.uid), {
+      photoURL: photoURL,
+      lastUpdated: serverTimestamp(),
+    });
+
+    // Update user data
+    userData.photoURL = photoURL;
+
+    // Update UI
+    const avatarImgs = document.querySelectorAll(".profile-avatar img");
+    avatarImgs.forEach((img) => {
+      img.src = photoURL;
+    });
+
+    // Reset upload button
+    if (avatarUploadBtn) {
+      avatarUploadBtn.innerHTML = '<i class="fas fa-camera"></i>';
+      avatarUploadBtn.style.pointerEvents = "";
+    }
+
+    showNotification("Profile picture updated successfully!", "success");
+
+    // Update profile completion
+    updateProfileCompletion();
+  } catch (error) {
+    console.error("Error uploading profile picture:", error);
+    showNotification(
+      "Error uploading profile picture: " + error.message,
+      "error"
+    );
+
+    // Reset upload button
+    const avatarUploadBtn = document.querySelector(".avatar-upload");
+    if (avatarUploadBtn) {
+      avatarUploadBtn.innerHTML = '<i class="fas fa-camera"></i>';
+      avatarUploadBtn.style.pointerEvents = "";
+    }
+  }
+}
+
+/**
+ * Set up resume upload
+ */
+function setupResumeUpload() {
+  const uploadResumeBtn = document.getElementById("upload-resume-button");
+  const resumeFileInput = document.getElementById("resume-file-input");
+
+  if (uploadResumeBtn && resumeFileInput) {
+    uploadResumeBtn.addEventListener("click", () => {
+      resumeFileInput.click();
+    });
+
+    resumeFileInput.addEventListener("change", uploadResume);
+  }
+}
+
+/**
+ * Upload resume to Firebase Storage
+ * @param {Event} event - The file input change event
+ */
+async function uploadResume(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  try {
+    // Show loading state
+    const uploadBtn = document.getElementById("upload-resume-button");
+    const originalText = uploadBtn.textContent;
+    uploadBtn.textContent = "Uploading...";
+    uploadBtn.disabled = true;
+
+    // Create storage reference
+    const storageRef = ref(
+      storage,
+      `resumes/${auth.currentUser.uid}/${file.name}`
+    );
+
+    // Upload file
+    await uploadBytes(storageRef, file);
+
+    // Get download URL
+    const downloadURL = await getDownloadURL(storageRef);
+
+    // Update user profile with resume URL
+    await updateDoc(doc(db, "users", auth.currentUser.uid), {
+      resumeUrl: downloadURL,
+      resumeFilename: file.name,
+      resumeUpdatedAt: serverTimestamp(),
+    });
+
+    // Update local user data
+    userData.resumeUrl = downloadURL;
+    userData.resumeFilename = file.name;
+
+    // Update UI
+    uploadBtn.textContent = `Resume: ${file.name}`;
+    setTimeout(() => {
+      uploadBtn.textContent = originalText;
+      uploadBtn.disabled = false;
+    }, 3000);
+
+    showNotification("Resume uploaded successfully!", "success");
+
+    // Update profile completion
+    updateProfileCompletion();
+  } catch (error) {
+    console.error("Error uploading resume:", error);
+    showNotification("Error uploading resume: " + error.message, "error");
+
+    // Reset button
+    const uploadBtn = document.getElementById("upload-resume-button");
+    uploadBtn.textContent = "Upload Resume";
+    uploadBtn.disabled = false;
+  }
+}
+
+/**
+ * Set up modal buttons
+ */
+function setupModalButtons() {
+  // About section edit button
+  const aboutEditBtn = document.querySelector(
+    '.section-header:has(.section-title:contains("About")) .edit-button'
+  );
+  if (aboutEditBtn) {
+    aboutEditBtn.addEventListener("click", () => openModal("aboutModal"));
+  }
+
+  // Skills section edit button
+  const skillsEditBtn = document.querySelector(
+    '.section-header:has(.section-title:contains("Skills")) .edit-button'
+  );
+  if (skillsEditBtn) {
+    skillsEditBtn.addEventListener("click", () => openModal("skillsModal"));
+  }
+
+  // Add education button
+  const addEducationBtn = document.querySelector(
+    '.add-new-button[onclick*="educationModal"]'
+  );
+  if (addEducationBtn) {
+    addEducationBtn.onclick = null; // Remove inline handler
+    addEducationBtn.addEventListener("click", () =>
+      openModal("educationModal")
+    );
+  }
+
+  // Add experience button
+  const addExperienceBtn = document.querySelector(
+    '.add-new-button[onclick*="experienceModal"]'
+  );
+  if (addExperienceBtn) {
+    addExperienceBtn.onclick = null; // Remove inline handler
+    addExperienceBtn.addEventListener("click", () =>
+      openModal("experienceModal")
+    );
+  }
+
+  // Add project button
+  const addProjectBtn = document.querySelector(
+    '.add-new-button[onclick*="projectModal"]'
+  );
+  if (addProjectBtn) {
+    addProjectBtn.onclick = null; // Remove inline handler
+    addProjectBtn.addEventListener("click", () => openModal("projectModal"));
+  }
+
+  // Add accomplishment button
+  const addAccomplishmentBtn = document.querySelector(
+    '.add-new-button[onclick*="accomplishmentModal"]'
+  );
+  if (addAccomplishmentBtn) {
+    addAccomplishmentBtn.onclick = null; // Remove inline handler
+    addAccomplishmentBtn.addEventListener("click", () =>
+      openModal("accomplishmentModal")
+    );
+  }
+
+  // Define global functions for remove buttons
+  window.removeEducation = removeEducation;
+  window.removeExperience = removeExperience;
+  window.removeProject = removeProject;
+  window.removeAccomplishment = removeAccomplishment;
+}
+
+/**
+ * Open a modal
+ * @param {string} modalId - The ID of the modal to open
+ * @param {Object} editData - Data to pre-fill if editing an existing item
+ */
+function openModal(modalId, editData = null) {
   const modal = document.createElement("div");
   modal.className = "modal";
-  modal.style.display = "flex"; // Use flex to enable centering
-  modal.innerHTML = getModalContent(modalId);
+  modal.style.display = "flex";
+  modal.innerHTML = getModalContent(modalId, editData);
   document.body.appendChild(modal);
 
-  // Close modal when clicking outside the content area
+  // Close when clicking outside
   modal.addEventListener("click", (e) => {
     if (e.target === modal) {
-      // Only close if clicking the background overlay
       closeModal(modal);
     }
   });
 
-  // Focus the first input field in the modal for accessibility
-  const firstInput = modal.querySelector("input, textarea, select");
-  if (firstInput) {
-    firstInput.focus();
-  }
-}
-
-function closeModal(modal) {
-  // Use optional chaining in case the modal was already removed by other means
-  modal?.remove();
-}
-
-// Handle profile picture upload
-function setupProfilePictureUpload() {
-  const avatarUpload = document.querySelector(".avatar-upload");
-  const profileAvatarImg = document.querySelector(".profile-avatar img");
-  if (!avatarUpload || !profileAvatarImg) {
-    console.warn("Profile picture upload elements not found.");
-    return; // Exit if elements aren't found
-  }
-
-  // Create file input only once
-  let fileInput = document.getElementById("profile-pic-input");
-  if (!fileInput) {
-    fileInput = document.createElement("input");
-    fileInput.type = "file";
-    fileInput.accept = "image/*";
-    fileInput.style.display = "none";
-    fileInput.id = "profile-pic-input";
-    document.body.appendChild(fileInput);
-
-    fileInput.addEventListener("change", (e) => {
-      const file = e.target.files[0];
-      if (file) {
-        const reader = new FileReader();
-        reader.onload = (event) => {
-          profileAvatarImg.src = event.target.result;
-          // Add backend saving logic here if needed
-          console.log("Profile picture updated (client-side).");
-          // Optional: show feedback to user
-        };
-        reader.onerror = () => {
-          console.error("Error reading file for profile picture.");
-          alert("Error loading profile picture.");
-        };
-        reader.readAsDataURL(file);
-      }
-      // Reset input value to allow re-uploading the same file
-      e.target.value = null;
+  // Add event listener to form
+  const form = modal.querySelector("form");
+  if (form) {
+    form.addEventListener("submit", (e) => {
+      e.preventDefault();
+      saveFormData(modalId, new FormData(form), editData);
     });
   }
-
-  avatarUpload.addEventListener("click", () => {
-    if (fileInput) {
-      fileInput.click();
-    }
-  });
 }
 
-// --- Card Removal Function ---
 /**
- * Removes the card element associated with the button clicked.
- * @param {HTMLElement} buttonElement The remove button element that was clicked.
- * @param {string} cardType The type of card ('experience', 'education', 'project', 'accomplishment') to ensure the correct parent is found.
+ * Close a modal
+ * @param {HTMLElement} modal - The modal element to close
  */
-function removeCard(buttonElement, cardType) {
-  // Determine the correct class selector based on cardType
-  let cardSelector = "";
-  if (cardType === "project") {
-    // Use '.project-card' if defined, else fallback to '.experience-card' style
-    cardSelector = document.querySelector(".project-card")
-      ? ".project-card"
-      : ".experience-card";
-  } else {
-    cardSelector = `.${cardType}-card`;
-  }
+function closeModal(modal) {
+  if (modal) {
+    modal.style.opacity = "0";
+    modal.style.transition = "opacity 0.3s";
 
-  const card = buttonElement.closest(cardSelector);
-
-  if (card) {
-    // Confirmation dialog
-    if (confirm(`Are you sure you want to remove this ${cardType} entry?`)) {
-      card.remove();
-      // Add backend logic here to delete the item persistently
-      console.log(`${cardType} card removed (client-side).`);
-      // Optional: Add visual feedback or update counts
-    }
-  } else {
-    console.error(`Could not find parent card ('${cardSelector}') to remove.`);
+    setTimeout(() => {
+      if (modal.parentNode) {
+        modal.parentNode.removeChild(modal);
+      }
+    }, 300);
   }
 }
 
-// --- Save Form Data ---
-function saveFormData(modalId, formData) {
-  const modalElement = document.querySelector(".modal"); // Get the modal element to close it later
-
-  try {
-    switch (modalId) {
-      case "aboutModal":
-        const aboutTextElement = document.querySelector(".about-text");
-        if (aboutTextElement) {
-          aboutTextElement.textContent = formData.get("about");
-        }
-        break;
-      case "educationModal":
-        addEducationCard(formData);
-        break;
-      case "experienceModal":
-        addExperienceCard(formData);
-        break;
-      case "projectModal":
-        addProjectCard(formData);
-        break;
-      case "skillsModal":
-        const skillsInput = formData.get("skills");
-        if (skillsInput !== null) {
-          updateSkills(
-            skillsInput
-              .split(",")
-              .map((skill) => skill.trim())
-              .filter((skill) => skill)
-          );
-        }
-        break;
-      case "accomplishmentModal":
-        addAccomplishmentCard(formData);
-        break;
-      default:
-        console.warn("Unknown modalId:", modalId);
-    }
-  } catch (error) {
-    console.error(`Error saving form data for ${modalId}:`, error);
-    alert(`An error occurred while saving ${modalId}. Please try again.`);
-    // Don't close the modal if save failed
-    return;
-  }
-
-  // Close the modal after successful save
-  if (modalElement) {
-    closeModal(modalElement);
-  }
-}
-
-// --- Get Modal Content ---
-function getModalContent(modalId) {
-  // Default values for fields (empty for add, fetch existing for edit)
-  let currentAbout =
-    document.querySelector(".about-text")?.textContent.trim() || "";
+/**
+ * Get modal content HTML
+ * @param {string} modalId - The ID of the modal
+ * @param {Object} editData - Data to pre-fill if editing an existing item
+ * @returns {string} - The modal HTML content
+ */
+function getModalContent(modalId, editData = null) {
+  let currentAbout = userData?.about || "";
   let currentSkills = Array.from(
     document.querySelectorAll(".skills-grid .skill-tag")
   )
     .map((tag) => tag.textContent.trim())
     .join(", ");
 
-  const modalContents = {
-    aboutModal: `
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h3>Edit About</h3>
-                    <button type="button" class="close-modal" onclick="closeModal(this.closest('.modal'))" aria-label="Close">&times;</button>
-                </div>
-                <form onsubmit="event.preventDefault(); saveFormData('aboutModal', new FormData(this));">
-                    <div class="modal-body">
-                        <div class="form-group">
-                            <label for="about" class="form-label">About Me</label>
-                            <textarea id="about" name="about" class="form-textarea" required>${currentAbout}</textarea>
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="modal-button cancel-button" onclick="closeModal(this.closest('.modal'))">Cancel</button>
-                        <button type="submit" class="modal-button save-button">Save Changes</button>
-                    </div>
-                </form>
+  switch (modalId) {
+    case "aboutModal":
+      return `
+        <div class="modal-content">
+          <div class="modal-header">
+            <h3>Edit About</h3>
+            <button type="button" class="close-modal" onclick="this.closest('.modal').remove()" aria-label="Close">&times;</button>
+          </div>
+          <form>
+            <div class="modal-body">
+              <div class="form-group">
+                <label for="about" class="form-label">About Me</label>
+                <textarea id="about" name="about" class="form-textarea" required>${currentAbout}</textarea>
+              </div>
             </div>
-        `,
-    educationModal: `
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h3>Add/Edit Education</h3>
-                    <button type="button" class="close-modal" onclick="closeModal(this.closest('.modal'))" aria-label="Close">&times;</button>
-                </div>
-                <form onsubmit="event.preventDefault(); saveFormData('educationModal', new FormData(this));">
-                    <div class="modal-body">
-                        <div class="form-group">
-                            <label for="school" class="form-label">School Name</label>
-                            <input type="text" id="school" name="school" class="form-input" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="degree" class="form-label">Degree/Diploma</label>
-                            <input type="text" id="degree" name="degree" class="form-input">
-                        </div>
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label for="eduStartDate" class="form-label">Start Date</label>
-                                <input type="text" id="eduStartDate" name="startDate" class="form-input" placeholder="e.g., Aug 2021">
-                            </div>
-                            <div class="form-group">
-                                <label for="eduEndDate" class="form-label">End Date</label>
-                                <input type="text" id="eduEndDate" name="endDate" class="form-input" placeholder="e.g., Jun 2025 or Present">
-                            </div>
-                        </div>
-                         <div class="form-group">
-                            <label for="eduGpa" class="form-label">GPA (Optional)</label>
-                            <input type="text" id="eduGpa" name="gpa" class="form-input" placeholder="e.g., 4.0 or 4.2/4.0">
-                        </div>
-                        <div class="form-group">
-                            <label for="eduDescription" class="form-label">Description/Courses</label>
-                            <textarea id="eduDescription" name="description" class="form-textarea" placeholder="Relevant coursework, activities..."></textarea>
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="modal-button cancel-button" onclick="closeModal(this.closest('.modal'))">Cancel</button>
-                        <button type="submit" class="modal-button save-button">Save Education</button>
-                    </div>
-                </form>
+            <div class="modal-footer">
+              <button type="button" class="modal-button cancel-button" onclick="this.closest('.modal').remove()">Cancel</button>
+              <button type="submit" class="modal-button save-button">Save Changes</button>
             </div>
-        `,
-    experienceModal: `
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h3>Add/Edit Experience</h3>
-                     <button type="button" class="close-modal" onclick="closeModal(this.closest('.modal'))" aria-label="Close">&times;</button>
+          </form>
+        </div>
+      `;
+
+    case "educationModal":
+      return `
+        <div class="modal-content">
+          <div class="modal-header">
+            <h3>${editData ? "Edit" : "Add"} Education</h3>
+            <button type="button" class="close-modal" onclick="this.closest('.modal').remove()" aria-label="Close">&times;</button>
+          </div>
+          <form>
+            ${
+              editData
+                ? `<input type="hidden" name="id" value="${editData.id}">`
+                : ""
+            }
+            <div class="modal-body">
+              <div class="form-group">
+                <label for="school" class="form-label">School Name</label>
+                <input type="text" id="school" name="school" class="form-input" required value="${
+                  editData?.school || ""
+                }">
+              </div>
+              <div class="form-group">
+                <label for="degree" class="form-label">Degree/Diploma</label>
+                <input type="text" id="degree" name="degree" class="form-input" value="${
+                  editData?.degree || ""
+                }">
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="eduStartDate" class="form-label">Start Date</label>
+                  <input type="text" id="eduStartDate" name="startDate" class="form-input" placeholder="e.g., Aug 2021" value="${
+                    editData?.startDate || ""
+                  }">
                 </div>
-                 <form onsubmit="event.preventDefault(); saveFormData('experienceModal', new FormData(this));">
-                    <div class="modal-body">
-                         <div class="form-group">
-                            <label for="expTitle" class="form-label">Title</label>
-                            <input type="text" id="expTitle" name="title" class="form-input" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="expCompany" class="form-label">Company/Organization</label>
-                            <input type="text" id="expCompany" name="company" class="form-input" required>
-                        </div>
-                         <div class="form-row">
-                            <div class="form-group">
-                                <label for="expStartDate" class="form-label">Start Date</label>
-                                <input type="text" id="expStartDate" name="startDate" class="form-input" placeholder="e.g., Sep 2023" required>
-                            </div>
-                            <div class="form-group">
-                                <label for="expEndDate" class="form-label">End Date</label>
-                                <input type="text" id="expEndDate" name="endDate" class="form-input" placeholder="e.g., Present or Aug 2024" required>
-                            </div>
-                        </div>
-                         <div class="form-group">
-                            <label for="expLocation" class="form-label">Location</label>
-                            <input type="text" id="expLocation" name="location" class="form-input" placeholder="e.g., Cupertino, CA">
-                        </div>
-                        <div class="form-group">
-                            <label for="expDescription" class="form-label">Description</label>
-                            <textarea id="expDescription" name="description" class="form-textarea" placeholder="Key responsibilities and achievements..."></textarea>
-                        </div>
-                         <div class="form-group">
-                            <label for="expLogo" class="form-label">Logo URL (Optional)</label>
-                            <input type="url" id="expLogo" name="logo" class="form-input" placeholder="https://...">
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="modal-button cancel-button" onclick="closeModal(this.closest('.modal'))">Cancel</button>
-                        <button type="submit" class="modal-button save-button">Save Experience</button>
-                    </div>
-                </form>
-            </div>
-        `,
-    skillsModal: `
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h3>Edit Skills</h3>
-                     <button type="button" class="close-modal" onclick="closeModal(this.closest('.modal'))" aria-label="Close">&times;</button>
+                <div class="form-group">
+                  <label for="eduEndDate" class="form-label">End Date</label>
+                  <input type="text" id="eduEndDate" name="endDate" class="form-input" placeholder="e.g., Jun 2025 or Present" value="${
+                    editData?.endDate || ""
+                  }">
                 </div>
-                 <form onsubmit="event.preventDefault(); saveFormData('skillsModal', new FormData(this));">
-                    <div class="modal-body">
-                        <div class="form-group">
-                            <label for="skills" class="form-label">Skills</label>
-                            <input type="text" id="skills" name="skills" class="form-input" value="${currentSkills}" required>
-                            <p class="form-hint">Enter your skills separated by commas, e.g., HTML, CSS, JavaScript, Python</p>
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="modal-button cancel-button" onclick="closeModal(this.closest('.modal'))">Cancel</button>
-                        <button type="submit" class="modal-button save-button">Save Skills</button>
-                    </div>
-                </form>
+              </div>
+              <div class="form-group">
+                <label for="eduGpa" class="form-label">GPA (Optional)</label>
+                <input type="text" id="eduGpa" name="gpa" class="form-input" placeholder="e.g., 4.0 or 4.2/4.0" value="${
+                  editData?.gpa || ""
+                }">
+              </div>
+              <div class="form-group">
+                <label for="eduDescription" class="form-label">Description/Courses</label>
+                <textarea id="eduDescription" name="description" class="form-textarea" placeholder="Relevant coursework, activities...">${
+                  editData?.description || ""
+                }</textarea>
+              </div>
             </div>
-        `,
-    projectModal: `
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h3>Add/Edit Project</h3>
-                    <button type="button" class="close-modal" onclick="closeModal(this.closest('.modal'))" aria-label="Close">&times;</button>
+            <div class="modal-footer">
+              <button type="button" class="modal-button cancel-button" onclick="this.closest('.modal').remove()">Cancel</button>
+              <button type="submit" class="modal-button save-button">Save Education</button>
+            </div>
+          </form>
+        </div>
+      `;
+
+    case "experienceModal":
+      return `
+        <div class="modal-content">
+          <div class="modal-header">
+            <h3>${editData ? "Edit" : "Add"} Experience</h3>
+            <button type="button" class="close-modal" onclick="this.closest('.modal').remove()" aria-label="Close">&times;</button>
+          </div>
+          <form>
+            ${
+              editData
+                ? `<input type="hidden" name="id" value="${editData.id}">`
+                : ""
+            }
+            <div class="modal-body">
+              <div class="form-group">
+                <label for="expTitle" class="form-label">Title</label>
+                <input type="text" id="expTitle" name="title" class="form-input" required value="${
+                  editData?.title || ""
+                }">
+              </div>
+              <div class="form-group">
+                <label for="expCompany" class="form-label">Company/Organization</label>
+                <input type="text" id="expCompany" name="company" class="form-input" required value="${
+                  editData?.company || ""
+                }">
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="expStartDate" class="form-label">Start Date</label>
+                  <input type="text" id="expStartDate" name="startDate" class="form-input" placeholder="e.g., Sep 2023" required value="${
+                    editData?.startDate || ""
+                  }">
                 </div>
-                <form onsubmit="event.preventDefault(); saveFormData('projectModal', new FormData(this));">
-                    <div class="modal-body">
-                         <div class="form-group">
-                            <label for="projName" class="form-label">Project Name</label>
-                            <input type="text" id="projName" name="name" class="form-input" required>
-                        </div>
-                         <div class="form-group">
-                            <label for="projType" class="form-label">Type/Subtitle</label>
-                            <input type="text" id="projType" name="type" class="form-input" placeholder="e.g., Web Application, UI/UX Design">
-                        </div>
-                         <div class="form-row">
-                            <div class="form-group">
-                                <label for="projStartDate" class="form-label">Start Date (Optional)</label>
-                                <input type="text" id="projStartDate" name="startDate" class="form-input" placeholder="e.g., Jan 2023">
-                            </div>
-                            <div class="form-group">
-                                <label for="projEndDate" class="form-label">End Date (Optional)</label>
-                                <input type="text" id="projEndDate" name="endDate" class="form-input" placeholder="e.g., Mar 2023">
-                            </div>
-                        </div>
-                         <div class="form-group">
-                            <label for="projLink" class="form-label">Link (Optional)</label>
-                            <input type="url" id="projLink" name="link" class="form-input" placeholder="e.g., GitHub URL, Live Demo URL">
-                        </div>
-                        <div class="form-group">
-                            <label for="projDescription" class="form-label">Description</label>
-                            <textarea id="projDescription" name="description" class="form-textarea" required placeholder="What the project does, technologies used..."></textarea>
-                        </div>
-                         <div class="form-group">
-                            <label for="projIcon" class="form-label">Font Awesome Icon (Optional)</label>
-                            <input type="text" id="projIcon" name="icon" class="form-input" placeholder="e.g., fas fa-code">
-                            <p class="form-hint">Find icons at Font Awesome (v6 used here). Use the full class name (e.g., fas fa-rocket).</p>
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="modal-button cancel-button" onclick="closeModal(this.closest('.modal'))">Cancel</button>
-                        <button type="submit" class="modal-button save-button">Save Project</button>
-                    </div>
-                </form>
-            </div>
-        `,
-    accomplishmentModal: `
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h3>Add/Edit Accomplishment</h3>
-                     <button type="button" class="close-modal" onclick="closeModal(this.closest('.modal'))" aria-label="Close">&times;</button>
+                <div class="form-group">
+                  <label for="expEndDate" class="form-label">End Date</label>
+                  <input type="text" id="expEndDate" name="endDate" class="form-input" placeholder="e.g., Present or Aug 2024" required value="${
+                    editData?.endDate || ""
+                  }">
                 </div>
-                 <form onsubmit="event.preventDefault(); saveFormData('accomplishmentModal', new FormData(this));">
-                    <div class="modal-body">
-                         <div class="form-group">
-                            <label for="accTitle" class="form-label">Title</label>
-                            <input type="text" id="accTitle" name="title" class="form-input" required placeholder="e.g., Award Name, Certification, Publication">
-                        </div>
-                        <div class="form-group">
-                            <label for="accDate" class="form-label">Date</label>
-                            <input type="text" id="accDate" name="date" class="form-input" placeholder="e.g., November 2023 or 2022 - Present" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="accDescription" class="form-label">Description (Optional)</label>
-                            <textarea id="accDescription" name="description" class="form-textarea" placeholder="Details about the accomplishment..."></textarea>
-                        </div>
-                    </div>
-                    <div class="modal-footer">
-                        <button type="button" class="modal-button cancel-button" onclick="closeModal(this.closest('.modal'))">Cancel</button>
-                        <button type="submit" class="modal-button save-button">Save Accomplishment</button>
-                    </div>
-                </form>
+              </div>
+              <div class="form-group">
+                <label for="expLocation" class="form-label">Location</label>
+                <input type="text" id="expLocation" name="location" class="form-input" placeholder="e.g., Cupertino, CA" value="${
+                  editData?.location || ""
+                }">
+              </div>
+              <div class="form-group">
+                <label for="expDescription" class="form-label">Description</label>
+                <textarea id="expDescription" name="description" class="form-textarea" placeholder="Key responsibilities and achievements...">${
+                  editData?.description || ""
+                }</textarea>
+              </div>
+              <div class="form-group">
+                <label for="expLogo" class="form-label">Logo URL (Optional)</label>
+                <input type="url" id="expLogo" name="logoUrl" class="form-input" placeholder="https://..." value="${
+                  editData?.logoUrl || ""
+                }">
+              </div>
             </div>
-        `,
+            <div class="modal-footer">
+              <button type="button" class="modal-button cancel-button" onclick="this.closest('.modal').remove()">Cancel</button>
+              <button type="submit" class="modal-button save-button">Save Experience</button>
+            </div>
+          </form>
+        </div>
+      `;
+
+    case "skillsModal":
+      return `
+        <div class="modal-content">
+          <div class="modal-header">
+            <h3>Edit Skills</h3>
+            <button type="button" class="close-modal" onclick="this.closest('.modal').remove()" aria-label="Close">&times;</button>
+          </div>
+          <form>
+            <div class="modal-body">
+              <div class="form-group">
+                <label for="skills" class="form-label">Skills</label>
+                <input type="text" id="skills" name="skills" class="form-input" value="${currentSkills}" required>
+                <p class="form-hint">Enter your skills separated by commas, e.g., HTML, CSS, JavaScript, Python</p>
+              </div>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="modal-button cancel-button" onclick="this.closest('.modal').remove()">Cancel</button>
+              <button type="submit" class="modal-button save-button">Save Skills</button>
+            </div>
+          </form>
+        </div>
+      `;
+
+    case "projectModal":
+      return `
+        <div class="modal-content">
+          <div class="modal-header">
+            <h3>${editData ? "Edit" : "Add"} Project</h3>
+            <button type="button" class="close-modal" onclick="this.closest('.modal').remove()" aria-label="Close">&times;</button>
+          </div>
+          <form>
+            ${
+              editData
+                ? `<input type="hidden" name="id" value="${editData.id}">`
+                : ""
+            }
+            <div class="modal-body">
+              <div class="form-group">
+                <label for="projName" class="form-label">Project Name</label>
+                <input type="text" id="projName" name="name" class="form-input" required value="${
+                  editData?.name || ""
+                }">
+              </div>
+              <div class="form-group">
+                <label for="projType" class="form-label">Type/Subtitle</label>
+                <input type="text" id="projType" name="type" class="form-input" placeholder="e.g., Web Application, UI/UX Design" value="${
+                  editData?.type || ""
+                }">
+              </div>
+              <div class="form-row">
+                <div class="form-group">
+                  <label for="projStartDate" class="form-label">Start Date (Optional)</label>
+                  <input type="text" id="projStartDate" name="startDate" class="form-input" placeholder="e.g., Jan 2023" value="${
+                    editData?.startDate || ""
+                  }">
+                </div>
+                <div class="form-group">
+                  <label for="projEndDate" class="form-label">End Date (Optional)</label>
+                  <input type="text" id="projEndDate" name="endDate" class="form-input" placeholder="e.g., Mar 2023" value="${
+                    editData?.endDate || ""
+                  }">
+                </div>
+              </div>
+              <div class="form-group">
+                <label for="projLink" class="form-label">Link (Optional)</label>
+                <input type="url" id="projLink" name="link" class="form-input" placeholder="e.g., GitHub URL, Live Demo URL" value="${
+                  editData?.link || ""
+                }">
+              </div>
+              <div class="form-group">
+                <label for="projDescription" class="form-label">Description</label>
+                <textarea id="projDescription" name="description" class="form-textarea" required placeholder="What the project does, technologies used...">${
+                  editData?.description || ""
+                }</textarea>
+              </div>
+              <div class="form-group">
+                <label for="projIcon" class="form-label">Font Awesome Icon (Optional)</label>
+                <input type="text" id="projIcon" name="icon" class="form-input" placeholder="e.g., fas fa-code" value="${
+                  editData?.icon || ""
+                }">
+                <p class="form-hint">Find icons at Font Awesome (v6 used here). Use the full class name (e.g., fas fa-rocket).</p>
+              </div>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="modal-button cancel-button" onclick="this.closest('.modal').remove()">Cancel</button>
+              <button type="submit" class="modal-button save-button">Save Project</button>
+            </div>
+          </form>
+        </div>
+      `;
+
+    case "accomplishmentModal":
+      return `
+        <div class="modal-content">
+          <div class="modal-header">
+            <h3>${editData ? "Edit" : "Add"} Accomplishment</h3>
+            <button type="button" class="close-modal" onclick="this.closest('.modal').remove()" aria-label="Close">&times;</button>
+          </div>
+          <form>
+            ${
+              editData
+                ? `<input type="hidden" name="id" value="${editData.id}">`
+                : ""
+            }
+            <div class="modal-body">
+              <div class="form-group">
+                <label for="accTitle" class="form-label">Title</label>
+                <input type="text" id="accTitle" name="title" class="form-input" required placeholder="e.g., Award Name, Certification, Publication" value="${
+                  editData?.title || ""
+                }">
+              </div>
+              <div class="form-group">
+                <label for="accDate" class="form-label">Date</label>
+                <input type="text" id="accDate" name="date" class="form-input" placeholder="e.g., November 2023 or 2022 - Present" required value="${
+                  editData?.date || ""
+                }">
+              </div>
+              <div class="form-group">
+                <label for="accDescription" class="form-label">Description (Optional)</label>
+                <textarea id="accDescription" name="description" class="form-textarea" placeholder="Details about the accomplishment...">${
+                  editData?.description || ""
+                }</textarea>
+              </div>
+            </div>
+            <div class="modal-footer">
+              <button type="button" class="modal-button cancel-button" onclick="this.closest('.modal').remove()">Cancel</button>
+              <button type="submit" class="modal-button save-button">Save Accomplishment</button>
+            </div>
+          </form>
+        </div>
+      `;
+
+    default:
+      return `
+        <div class="modal-content">
+          <div class="modal-header">
+            <h3>Error</h3>
+            <button type="button" class="close-modal" onclick="this.closest('.modal').remove()" aria-label="Close">&times;</button>
+          </div>
+          <div class="modal-body">
+            <p>Unknown modal type: ${modalId}</p>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="modal-button cancel-button" onclick="this.closest('.modal').remove()">Close</button>
+          </div>
+        </div>
+      `;
+  }
+}
+
+/**
+ * Save form data to Firestore
+ * @param {string} modalId - The ID of the modal
+ * @param {FormData} formData - The form data
+ * @param {Object} editData - Data if editing an existing item
+ */
+async function saveFormData(modalId, formData, editData) {
+  try {
+    switch (modalId) {
+      case "aboutModal":
+        await saveAboutData(formData);
+        break;
+      case "educationModal":
+        await saveEducationData(formData, editData);
+        break;
+      case "experienceModal":
+        await saveExperienceData(formData, editData);
+        break;
+      case "skillsModal":
+        await saveSkillsData(formData);
+        break;
+      case "projectModal":
+        await saveProjectData(formData, editData);
+        break;
+      case "accomplishmentModal":
+        await saveAccomplishmentData(formData, editData);
+        break;
+    }
+
+    // Close the modal
+    const modal = document.querySelector(".modal");
+    if (modal) {
+      closeModal(modal);
+    }
+
+    // Show success notification
+    showNotification("Data saved successfully!", "success");
+
+    // Update profile completion
+    updateProfileCompletion();
+  } catch (error) {
+    console.error("Error saving form data:", error);
+    showNotification("Error saving data: " + error.message, "error");
+  }
+}
+
+/**
+ * Save about data to Firestore
+ * @param {FormData} formData - The form data
+ */
+async function saveAboutData(formData) {
+  const about = formData.get("about");
+
+  // Update user document
+  await updateDoc(doc(db, "users", auth.currentUser.uid), {
+    about: about,
+    lastUpdated: serverTimestamp(),
+  });
+
+  // Update local data
+  userData.about = about;
+
+  // Update UI
+  const aboutText = document.querySelector(".about-text");
+  if (aboutText) {
+    aboutText.textContent = about;
+  }
+}
+
+/**
+ * Save education data to Firestore
+ * @param {FormData} formData - The form data
+ * @param {Object} editData - Data if editing an existing item
+ */
+async function saveEducationData(formData, editData) {
+  const educationData = {
+    studentId: auth.currentUser.uid,
+    school: formData.get("school"),
+    degree: formData.get("degree"),
+    startDate: formData.get("startDate"),
+    endDate: formData.get("endDate"),
+    gpa: formData.get("gpa"),
+    description: formData.get("description"),
+    lastUpdated: serverTimestamp(),
   };
 
-  return (
-    modalContents[modalId] ||
-    `<div class="modal-content"><div class="modal-header"><h3>Error</h3><button type="button" class="close-modal" onclick="closeModal(this.closest('.modal'))" aria-label="Close">&times;</button></div><div class="modal-body">Error: Modal content for '${modalId}' not found.</div></div>`
-  );
-}
-
-// --- Helper function to safely get form data text ---
-function getFormDataText(formData, key, defaultValue = "") {
-  // Use optional chaining and nullish coalescing
-  return formData.get(key)?.toString() ?? defaultValue;
-}
-
-// --- Function to find or create a card grid ---
-function findOrCreateCardGrid(sectionElement) {
-  if (!sectionElement) return null;
-  let cardGrid = sectionElement.querySelector(".card-grid");
-  if (!cardGrid) {
-    const addButton = sectionElement.querySelector(".add-new-button");
-    if (addButton) {
-      addButton.insertAdjacentHTML(
-        "beforebegin",
-        '<div class="card-grid"></div>'
-      );
-      cardGrid = sectionElement.querySelector(".card-grid");
-    }
-  }
-  return cardGrid;
-}
-
-// --- Add new card functions ---
-
-function addEducationCard(formData) {
-  const school = getFormDataText(formData, "school");
-  const degree = getFormDataText(formData, "degree");
-  const startDate = getFormDataText(formData, "startDate");
-  const endDate = getFormDataText(formData, "endDate");
-  const gpa = getFormDataText(formData, "gpa");
-  const description = getFormDataText(formData, "description");
-
-  const cardHTML = `
-        <div class="education-card">
-            <div class="card-header">
-                <div class="card-logo"><i class="fas fa-school"></i></div>
-                <div class="card-title-group">
-                    <h3 class="card-title">${school}</h3>
-                    <p class="card-subtitle">${degree}</p>
-                </div>
-                <button class="remove-button" onclick="removeCard(this, 'education')" aria-label="Remove education">×</button>
-            </div>
-            <div class="card-meta">
-                ${
-                  startDate || endDate
-                    ? `<span>${startDate} - ${endDate}</span>`
-                    : ""
-                }
-                 ${gpa ? `<span>GPA: ${gpa}</span>` : ""}
-            </div>
-             ${
-               description
-                 ? `<p class="card-description">${description}</p>`
-                 : ""
-             }
-        </div>`;
-
-  const educationSection =
-    document.querySelector(".education-card")?.closest(".content-section") ??
-    Array.from(document.querySelectorAll(".section-title"))
-      .find((el) => el.textContent.includes("Education"))
-      ?.closest(".content-section");
-  const cardGrid = findOrCreateCardGrid(educationSection);
-
-  if (cardGrid) {
-    cardGrid.insertAdjacentHTML("beforeend", cardHTML);
+  if (editData && formData.get("id")) {
+    // Update existing education
+    await updateDoc(doc(db, "education", formData.get("id")), educationData);
   } else {
-    console.error(
-      "Could not find the education section to insert the new card."
-    );
+    // Add new education
+    educationData.createdAt = serverTimestamp();
+    await addDoc(collection(db, "education"), educationData);
   }
+
+  // Reload education data
+  await loadEducation();
 }
 
-function addExperienceCard(formData) {
-  const title = getFormDataText(formData, "title");
-  const company = getFormDataText(formData, "company");
-  const startDate = getFormDataText(formData, "startDate");
-  const endDate = getFormDataText(formData, "endDate");
-  const location = getFormDataText(formData, "location");
-  const description = getFormDataText(formData, "description");
-  const logo = getFormDataText(formData, "logo");
+/**
+ * Save experience data to Firestore
+ * @param {FormData} formData - The form data
+ * @param {Object} editData - Data if editing an existing item
+ */
+async function saveExperienceData(formData, editData) {
+  const experienceData = {
+    studentId: auth.currentUser.uid,
+    title: formData.get("title"),
+    company: formData.get("company"),
+    startDate: formData.get("startDate"),
+    endDate: formData.get("endDate"),
+    location: formData.get("location"),
+    description: formData.get("description"),
+    logoUrl: formData.get("logoUrl"),
+    lastUpdated: serverTimestamp(),
+  };
 
-  const logoHTML = logo
-    ? `<img src="${logo}" alt="${company} Logo" onerror="this.onerror=null; this.parentElement.innerHTML='<i class=\\'fas fa-building\\'></i>';" />` // Added onerror fallback
-    : '<i class="fas fa-building"></i>';
-
-  const cardHTML = `
-        <div class="experience-card">
-            <div class="card-header">
-                <div class="card-logo">${logoHTML}</div>
-                <div class="card-title-group">
-                    <h3 class="card-title">${title}</h3>
-                    <p class="card-subtitle">${company}</p>
-                </div>
-                <button class="remove-button" onclick="removeCard(this, 'experience')" aria-label="Remove experience">×</button>
-            </div>
-            <div class="card-meta">
-                 ${
-                   startDate || endDate
-                     ? `<span>${startDate} - ${endDate}</span>`
-                     : ""
-                 }
-                ${location ? `<span>${location}</span>` : ""}
-            </div>
-            ${
-              description
-                ? `<p class="card-description">${description}</p>`
-                : ""
-            }
-        </div>`;
-
-  const experienceSection =
-    document.querySelector(".experience-card")?.closest(".content-section") ??
-    Array.from(document.querySelectorAll(".section-title"))
-      .find((el) => el.textContent.includes("Experience"))
-      ?.closest(".content-section");
-  const cardGrid = findOrCreateCardGrid(experienceSection);
-
-  if (cardGrid) {
-    cardGrid.insertAdjacentHTML("beforeend", cardHTML);
+  if (editData && formData.get("id")) {
+    // Update existing experience
+    await updateDoc(doc(db, "experience", formData.get("id")), experienceData);
   } else {
-    console.error(
-      "Could not find the experience section to insert the new card."
-    );
+    // Add new experience
+    experienceData.createdAt = serverTimestamp();
+    await addDoc(collection(db, "experience"), experienceData);
   }
+
+  // Reload experience data
+  await loadExperience();
 }
 
-function addProjectCard(formData) {
-  const name = getFormDataText(formData, "name");
-  const type = getFormDataText(formData, "type");
-  const startDate = getFormDataText(formData, "startDate");
-  const endDate = getFormDataText(formData, "endDate");
-  const link = getFormDataText(formData, "link");
-  const description = getFormDataText(formData, "description");
-  const icon = getFormDataText(formData, "icon", "fas fa-project-diagram"); // Default icon
+/**
+ * Save skills data to Firestore
+ * @param {FormData} formData - The form data
+ */
+async function saveSkillsData(formData) {
+  const skillsInput = formData.get("skills");
+  const skills = skillsInput
+    .split(",")
+    .map((skill) => skill.trim())
+    .filter((skill) => skill);
 
-  const dateRange =
-    startDate || endDate ? `<span>${startDate} - ${endDate}</span>` : "";
-  const linkHTML = link
-    ? `<span><a href="${link}" target="_blank" rel="noopener noreferrer" style="color: inherit;">Project Link</a></span>`
-    : "";
-  const cardClass = document.querySelector(".project-card")
-    ? "project-card"
-    : "experience-card"; // Use existing class
+  // Update user document with skills array
+  await updateDoc(doc(db, "users", auth.currentUser.uid), {
+    skills: skills,
+    lastUpdated: serverTimestamp(),
+  });
 
-  const cardHTML = `
-        <div class="${cardClass}">
-            <div class="card-header">
-                <div class="card-logo"><i class="${icon}"></i></div>
-                <div class="card-title-group">
-                    <h3 class="card-title">${name}</h3>
-                    <p class="card-subtitle">${type}</p>
-                </div>
-                 <button class="remove-button" onclick="removeCard(this, 'project')" aria-label="Remove project">×</button>
-            </div>
-            <div class="card-meta">
-                ${dateRange}
-                ${linkHTML}
-            </div>
-            ${
-              description
-                ? `<p class="card-description">${description}</p>`
-                : ""
-            }
-        </div>`;
+  // Update local data
+  userData.skills = skills;
 
-  const projectSection =
-    document.querySelector(`.${cardClass}`)?.closest(".content-section") ??
-    Array.from(document.querySelectorAll(".section-title"))
-      .find((el) => el.textContent.includes("Projects"))
-      ?.closest(".content-section");
-  const cardGrid = findOrCreateCardGrid(projectSection);
-
-  if (cardGrid) {
-    cardGrid.insertAdjacentHTML("beforeend", cardHTML);
-  } else {
-    console.error("Could not find the project section to insert the new card.");
-  }
-}
-
-function addAccomplishmentCard(formData) {
-  const title = getFormDataText(formData, "title");
-  const date = getFormDataText(formData, "date");
-  const description = getFormDataText(formData, "description");
-
-  const cardHTML = `
-        <div class="accomplishment-card">
-             <button class="remove-button" onclick="removeCard(this, 'accomplishment')" aria-label="Remove accomplishment">×</button>
-            <h3 class="accomplishment-title">${title}</h3>
-            <p class="accomplishment-date">${date}</p>
-            ${
-              description
-                ? `<p class="accomplishment-description">${description}</p>`
-                : ""
-            }
-        </div>`;
-
-  const accomplishmentSection =
-    document
-      .querySelector(".accomplishment-card")
-      ?.closest(".content-section") ??
-    Array.from(document.querySelectorAll(".section-title"))
-      .find((el) => el.textContent.includes("Accomplishments"))
-      ?.closest(".content-section");
-
-  // Accomplishments might not use a grid, insert before the add button
-  const addButton = accomplishmentSection?.querySelector(".add-new-button");
-  if (addButton) {
-    addButton.insertAdjacentHTML("beforebegin", cardHTML);
-  } else if (accomplishmentSection) {
-    // Fallback: append to section if button not found (less ideal)
-    accomplishmentSection.insertAdjacentHTML("beforeend", cardHTML);
-    console.warn(
-      "Add button not found for accomplishments, appended card to section end."
-    );
-  } else {
-    console.error(
-      "Could not find the accomplishment section to insert the new card."
-    );
-  }
-}
-
-// Update skills in the grid
-function updateSkills(skills) {
+  // Update UI
   const skillsGrid = document.querySelector(".skills-grid");
-  if (!skillsGrid) {
-    console.error("Skills grid not found.");
-    return;
-  }
-  // Clear existing skills
-  skillsGrid.innerHTML = "";
-  // Add new skills
-  skills
-    .filter((skill) => skill) // Filter out empty strings potentially from splitting
-    .forEach((skill) => {
+  if (skillsGrid) {
+    skillsGrid.innerHTML = "";
+    skills.forEach((skill) => {
       const skillTag = document.createElement("div");
       skillTag.className = "skill-tag";
-      skillTag.textContent = skill.trim(); // Trim each skill
+      skillTag.textContent = skill;
       skillsGrid.appendChild(skillTag);
     });
+  }
 }
 
-// --- Initialization ---
-document.addEventListener("DOMContentLoaded", () => {
-  // Setup editable components
-  setupProfilePictureUpload();
+/**
+ * Save project data to Firestore
+ * @param {FormData} formData - The form data
+ * @param {Object} editData - Data if editing an existing item
+ */
+async function saveProjectData(formData, editData) {
+  const projectData = {
+    studentId: auth.currentUser.uid,
+    name: formData.get("name"),
+    type: formData.get("type"),
+    startDate: formData.get("startDate"),
+    endDate: formData.get("endDate"),
+    link: formData.get("link"),
+    description: formData.get("description"),
+    icon: formData.get("icon") || "fas fa-code",
+    lastUpdated: serverTimestamp(),
+  };
 
-  // Make specific fields directly editable (inline)
-  const editableElements = document.querySelectorAll(
-    ".student-name, .student-headline" // Limit inline editing
-    // ".contact-value" // Cautious about enabling this for sensitive info
-  );
-  editableElements.forEach((element) => {
-    if (element.getAttribute("contenteditable") !== "true") {
-      element.setAttribute("contenteditable", "true");
-      element.style.cursor = "text";
-      element.dataset.originalValue = element.textContent.trim(); // Store original value
+  if (editData && formData.get("id")) {
+    // Update existing project
+    await updateDoc(doc(db, "projects", formData.get("id")), projectData);
+  } else {
+    // Add new project
+    projectData.createdAt = serverTimestamp();
+    await addDoc(collection(db, "projects"), projectData);
+  }
 
-      element.addEventListener("blur", (e) => {
-        const newValue = element.textContent.trim();
-        if (newValue !== element.dataset.originalValue) {
-          // Add backend saving logic here
-          console.log(
-            `Inline content updated (${element.className}):`,
-            newValue
-          );
-          element.dataset.originalValue = newValue; // Update stored value
-          // Optional: Add visual feedback (e.g., temporary highlight)
-          element.style.backgroundColor = "#e8f5e9"; // Light green flash
+  // Reload projects data
+  await loadProjects();
+}
+
+/**
+ * Save accomplishment data to Firestore
+ * @param {FormData} formData - The form data
+ * @param {Object} editData - Data if editing an existing item
+ */
+async function saveAccomplishmentData(formData, editData) {
+  const accomplishmentData = {
+    studentId: auth.currentUser.uid,
+    title: formData.get("title"),
+    date: formData.get("date"),
+    description: formData.get("description"),
+    lastUpdated: serverTimestamp(),
+  };
+
+  if (editData && formData.get("id")) {
+    // Update existing accomplishment
+    await updateDoc(
+      doc(db, "accomplishments", formData.get("id")),
+      accomplishmentData
+    );
+  } else {
+    // Add new accomplishment
+    accomplishmentData.createdAt = serverTimestamp();
+    await addDoc(collection(db, "accomplishments"), accomplishmentData);
+  }
+
+  // Reload accomplishments data
+  await loadAccomplishments();
+}
+
+/**
+ * Remove education entry
+ * @param {string} id - The ID of the education to remove
+ */
+async function removeEducation(id) {
+  if (!confirm("Are you sure you want to remove this education entry?")) {
+    return;
+  }
+
+  try {
+    await deleteDoc(doc(db, "education", id));
+
+    // Remove from UI
+    const educationCard = document.querySelector(
+      `.education-card[data-id="${id}"]`
+    );
+    if (educationCard) {
+      educationCard.remove();
+    }
+
+    showNotification("Education entry removed successfully!", "success");
+
+    // Update profile completion
+    updateProfileCompletion();
+  } catch (error) {
+    console.error("Error removing education:", error);
+    showNotification("Error removing education: " + error.message, "error");
+  }
+}
+
+/**
+ * Remove experience entry
+ * @param {string} id - The ID of the experience to remove
+ */
+async function removeExperience(id) {
+  if (!confirm("Are you sure you want to remove this experience entry?")) {
+    return;
+  }
+
+  try {
+    await deleteDoc(doc(db, "experience", id));
+
+    // Remove from UI
+    const experienceCard = document.querySelector(
+      `.experience-card[data-id="${id}"]`
+    );
+    if (experienceCard) {
+      experienceCard.remove();
+    }
+
+    showNotification("Experience entry removed successfully!", "success");
+
+    // Update profile completion
+    updateProfileCompletion();
+  } catch (error) {
+    console.error("Error removing experience:", error);
+    showNotification("Error removing experience: " + error.message, "error");
+  }
+}
+
+/**
+ * Remove project entry
+ * @param {string} id - The ID of the project to remove
+ */
+async function removeProject(id) {
+  if (!confirm("Are you sure you want to remove this project?")) {
+    return;
+  }
+
+  try {
+    await deleteDoc(doc(db, "projects", id));
+
+    // Remove from UI
+    const projectCard = document.querySelector(
+      `.project-card[data-id="${id}"]`
+    );
+    if (projectCard) {
+      projectCard.remove();
+    }
+
+    showNotification("Project removed successfully!", "success");
+  } catch (error) {
+    console.error("Error removing project:", error);
+    showNotification("Error removing project: " + error.message, "error");
+  }
+}
+
+/**
+ * Remove accomplishment entry
+ * @param {string} id - The ID of the accomplishment to remove
+ */
+async function removeAccomplishment(id) {
+  if (!confirm("Are you sure you want to remove this accomplishment?")) {
+    return;
+  }
+
+  try {
+    await deleteDoc(doc(db, "accomplishments", id));
+
+    // Remove from UI
+    const accomplishmentCard = document.querySelector(
+      `.accomplishment-card[data-id="${id}"]`
+    );
+    if (accomplishmentCard) {
+      accomplishmentCard.remove();
+    }
+
+    showNotification("Accomplishment removed successfully!", "success");
+  } catch (error) {
+    console.error("Error removing accomplishment:", error);
+    showNotification(
+      "Error removing accomplishment: " + error.message,
+      "error"
+    );
+  }
+}
+
+/**
+ * Set up inline editing for profile info
+ */
+function setupInlineEditing() {
+  const editableElements = [
+    { selector: ".student-name", field: "displayName" },
+    { selector: ".student-headline", field: "headline" },
+    { selector: ".contact-item:nth-child(2) .contact-value", field: "phone" },
+    {
+      selector: ".contact-item:nth-child(3) .contact-value",
+      field: "location",
+    },
+    {
+      selector: ".contact-item:nth-child(4) .contact-value",
+      field: "linkedin",
+    },
+    { selector: ".contact-item:nth-child(5) .contact-value", field: "website" },
+  ];
+
+  editableElements.forEach(({ selector, field }) => {
+    const element = document.querySelector(selector);
+    if (!element) return;
+
+    // Make element editable
+    element.setAttribute("contenteditable", "true");
+    element.dataset.field = field;
+
+    // Add visual cue on hover
+    element.style.cursor = "text";
+    element.addEventListener("mouseover", () => {
+      element.style.backgroundColor = "rgba(0, 0, 0, 0.05)";
+    });
+    element.addEventListener("mouseout", () => {
+      element.style.backgroundColor = "";
+    });
+
+    // Save on blur
+    element.addEventListener("blur", async () => {
+      const newValue = element.textContent.trim();
+      if (newValue !== userData[field]) {
+        try {
+          // Update field in Firestore
+          await updateDoc(doc(db, "users", auth.currentUser.uid), {
+            [field]: newValue,
+            lastUpdated: serverTimestamp(),
+          });
+
+          // Update local data
+          userData[field] = newValue;
+
+          // Visual feedback
+          element.style.backgroundColor = "#e8f5e9";
           setTimeout(() => {
             element.style.backgroundColor = "";
           }, 1000);
+
+          // Update profile completion
+          updateProfileCompletion();
+        } catch (error) {
+          console.error(`Error updating ${field}:`, error);
+          showNotification(
+            `Error updating ${field}: ${error.message}`,
+            "error"
+          );
+
+          // Revert to original value
+          element.textContent = userData[field] || "";
         }
-      });
-
-      // Prevent rich text pasting and limit length if needed
-      element.addEventListener("paste", (e) => {
-        e.preventDefault();
-        const text = e.clipboardData?.getData("text/plain");
-        if (text) {
-          document.execCommand("insertText", false, text);
-        }
-      });
-
-      // Optional: Handle Enter key (treat as blur/save)
-      element.addEventListener("keydown", (e) => {
-        if (e.key === "Enter") {
-          e.preventDefault(); // Prevent newline
-          element.blur(); // Trigger blur event to save
-        }
-      });
-    }
-  });
-
-  // Setup Resume Upload Button
-  const uploadResumeButton = document.getElementById("upload-resume-button");
-  const resumeFileInput = document.getElementById("resume-file-input");
-
-  if (uploadResumeButton && resumeFileInput) {
-    uploadResumeButton.addEventListener("click", () => {
-      resumeFileInput.click(); // Trigger the hidden file input
-    });
-
-    resumeFileInput.addEventListener("change", (event) => {
-      const file = event.target.files[0];
-      if (file) {
-        console.log("Selected resume file:", file.name, file.type, file.size);
-        // --- Placeholder for actual upload ---
-        alert(
-          `Selected file: ${file.name}\n(Upload functionality requires backend integration)`
-        );
-
-        // Optional: Provide feedback like changing button text or showing filename
-        // uploadResumeButton.textContent = `Resume: ${file.name}`; // Example feedback
-        // Reset file input value allows selecting the same file again if needed
-        event.target.value = null;
-      } else {
-        console.log("No resume file selected.");
       }
     });
+
+    // Handle Enter key
+    element.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        element.blur();
+      }
+    });
+  });
+}
+
+/**
+ * Show a notification message
+ * @param {string} message - The message to display
+ * @param {string} type - Type of notification (success, error, info)
+ */
+function showNotification(message, type = "success") {
+  const notification = document.createElement("div");
+  notification.className = `notification ${type}`;
+
+  // Set style based on type
+  if (type === "success") {
+    notification.style.backgroundColor = "#dff2bf";
+    notification.style.color = "#4f8a10";
+  } else if (type === "error") {
+    notification.style.backgroundColor = "#ffcccb";
+    notification.style.color = "#d8000c";
   } else {
-    console.warn("Upload resume button or file input not found.");
+    notification.style.backgroundColor = "#bce8f1";
+    notification.style.color = "#31708f";
   }
-}); // End DOMContentLoaded
+
+  notification.style.padding = "10px 15px";
+  notification.style.margin = "10px 0";
+  notification.style.borderRadius = "4px";
+  notification.style.boxShadow = "0 2px 4px rgba(0,0,0,0.1)";
+  notification.style.position = "fixed";
+  notification.style.bottom = "20px";
+  notification.style.right = "20px";
+  notification.style.zIndex = "1000";
+
+  notification.textContent = message;
+
+  document.body.appendChild(notification);
+
+  // Remove after 3 seconds
+  setTimeout(() => {
+    notification.style.opacity = "0";
+    notification.style.transition = "opacity 0.5s";
+
+    setTimeout(() => {
+      if (notification.parentNode) {
+        notification.parentNode.removeChild(notification);
+      }
+    }, 500);
+  }, 3000);
+}

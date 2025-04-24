@@ -4,6 +4,23 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>CareerBridge - Job Listings</title>
+    <script
+      type="module"
+      src="https://www.gstatic.com/firebasejs/10.1.0/firebase-app.js"
+    ></script>
+    <script
+      type="module"
+      src="https://www.gstatic.com/firebasejs/10.1.0/firebase-auth.js"
+    ></script>
+    <script
+      type="module"
+      src="https://www.gstatic.com/firebasejs/10.1.0/firebase-firestore.js"
+    ></script>
+    <script
+      type="module"
+      src="https://www.gstatic.com/firebasejs/10.1.0/firebase-storage.js"
+    ></script>
+    <script type="module" src="/src/config/firebase.js"></script>
     <link rel="stylesheet" href="../assets/css/jobs.css" />
     <link
       href="https://fonts.googleapis.com/icon?family=Material+Icons"
@@ -18,14 +35,14 @@
     <div class="container">
       <!-- Header -->
       <header class="header">
-        <a href="index.html" class="logo">
-          <img src="assets/img/dusty.webp" alt="CareerBridge Logo" />
+        <a href="../index.html" class="logo">
+          <img src="../assets/img/dusty.webp" alt="CareerBridge Logo" />
           <span
             >Cupertino High <span class="highlight">CareerBridge</span></span
           >
         </a>
         <nav class="nav-links">
-          <a href="index.html" class="nav-link">Home</a>
+          <a href="../index.html" class="nav-link">Home</a>
           <a href="jobs.html" class="nav-link active">Find Jobs</a>
           <a href="profile.html" class="nav-link">Profile</a>
           <a href="#" class="nav-link">Companies</a>
@@ -115,13 +132,11 @@
       <!-- Need Help Section -->
       <div class="help-section">
         <div class="help-content">
-          <h2>Need Help Finding the Right Opportunity?</h2>
-          <p>
-            Schedule a meeting with a career advisor to get personalized
-            guidance on finding and applying for jobs that match your skills and
-            interests.
-          </p>
-          <button class="btn primary-btn">Schedule Meeting</button>
+          <h2>Looking to hire?</h2>
+          <p>Create or sign in to an employer account to post a job listing.</p>
+          <button href="employer-login.html" class="btn primary-btn">
+            Employer Login
+          </button>
         </div>
       </div>
     </div>
@@ -151,6 +166,7 @@
     </button>
 
     <!-- Script -->
+    <script src="../assets/js/jobs.js"></script>
     <script>
       document.addEventListener("DOMContentLoaded", function () {
         // Sample job data (in a real application, this would come from a database)
@@ -498,6 +514,46 @@
         const jobsPerPage = 10;
         let appliedJobs = new Set();
 
+        // Sample student profile data (in a real app, this would come from Firebase Auth/Firestore)
+        const studentProfile = {
+          id: "student123",
+          name: "Alex Johnson",
+          email: "alex.johnson@student.cupertino.edu",
+          phone: "(555) 123-4567",
+          profilePicture: "../assets/img/profile-placeholder.jpg",
+          grade: "12th Grade",
+          gpa: "3.8",
+          major: "Computer Science",
+          skills: ["JavaScript", "Python", "Web Development", "UI/UX Design"],
+          experience: [
+            {
+              title: "Web Development Intern",
+              company: "Local Tech Startup",
+              duration: "Summer 2023",
+              description:
+                "Developed responsive web applications using React and Node.js",
+            },
+          ],
+          education: {
+            school: "Cupertino High School",
+            graduationYear: "2024",
+            relevantCourses: [
+              "AP Computer Science",
+              "Web Development",
+              "Statistics",
+            ],
+          },
+          projects: [
+            {
+              name: "Personal Portfolio Website",
+              description:
+                "Designed and developed a responsive portfolio website to showcase projects",
+              link: "https://alexjohnson-portfolio.example.com",
+            },
+          ],
+          resume: "path/to/resume.pdf",
+        };
+
         // UI Elements
         const jobListingsElement = document.getElementById("jobListings");
         const paginationElement = document.getElementById("pagination");
@@ -519,29 +575,36 @@
           "submitAdminPassword"
         );
 
-        // Initialize
+        // Initialize - show all jobs immediately
         updateJobCount(jobs.length);
-        applyFiltersAndSort();
+        renderJobs();
+        renderPagination();
 
         // Event Listeners
         // Admin Panel Modal
-        adminPanelLink.addEventListener("click", function (event) {
-          event.preventDefault();
-          adminModal.classList.add("show");
-        });
+        if (adminPanelLink) {
+          adminPanelLink.addEventListener("click", function (event) {
+            event.preventDefault();
+            adminModal.classList.add("show");
+          });
+        }
 
-        closeModalButton.addEventListener("click", function () {
-          adminModal.classList.remove("show");
-        });
+        if (closeModalButton) {
+          closeModalButton.addEventListener("click", function () {
+            adminModal.classList.remove("show");
+          });
+        }
 
-        submitPasswordButton.addEventListener("click", function () {
-          const password = document.getElementById("adminPassword").value;
-          if (password === "admin123") {
-            window.location.href = "admin.html";
-          } else {
-            alert("Incorrect password. Please try again.");
-          }
-        });
+        if (submitPasswordButton) {
+          submitPasswordButton.addEventListener("click", function () {
+            const password = document.getElementById("adminPassword").value;
+            if (password === "admin123") {
+              window.location.href = "admin.html";
+            } else {
+              alert("Incorrect password. Please try again.");
+            }
+          });
+        }
 
         window.addEventListener("click", function (event) {
           if (event.target === adminModal) {
@@ -568,51 +631,70 @@
         });
 
         // Search and filters
-        searchInput.addEventListener("input", function () {
-          currentPage = 1;
-          applyFiltersAndSort();
-        });
+        if (searchInput) {
+          searchInput.addEventListener("input", function () {
+            currentPage = 1;
+            applyFiltersAndSort();
+          });
+        }
 
-        jobTypeFilter.addEventListener("change", function () {
-          currentPage = 1;
-          applyFiltersAndSort();
-        });
+        if (jobTypeFilter) {
+          jobTypeFilter.addEventListener("change", function () {
+            currentPage = 1;
+            applyFiltersAndSort();
+          });
+        }
 
-        workArrangementFilter.addEventListener("change", function () {
-          currentPage = 1;
-          applyFiltersAndSort();
-        });
+        if (workArrangementFilter) {
+          workArrangementFilter.addEventListener("change", function () {
+            currentPage = 1;
+            applyFiltersAndSort();
+          });
+        }
 
-        minPayFilter.addEventListener("input", function () {
-          currentPage = 1;
-          applyFiltersAndSort();
-        });
+        if (minPayFilter) {
+          minPayFilter.addEventListener("input", function () {
+            currentPage = 1;
+            applyFiltersAndSort();
+          });
+        }
 
-        sortByFilter.addEventListener("change", function () {
-          currentPage = 1;
-          applyFiltersAndSort();
-        });
+        if (sortByFilter) {
+          sortByFilter.addEventListener("change", function () {
+            currentPage = 1;
+            applyFiltersAndSort();
+          });
+        }
 
-        clearFiltersBtn.addEventListener("click", function () {
-          searchInput.value = "";
-          jobTypeFilter.value = "";
-          workArrangementFilter.value = "";
-          minPayFilter.value = "";
-          sortByFilter.value = "date";
-          currentPage = 1;
-          applyFiltersAndSort();
-        });
+        if (clearFiltersBtn) {
+          clearFiltersBtn.addEventListener("click", function () {
+            if (searchInput) searchInput.value = "";
+            if (jobTypeFilter) jobTypeFilter.value = "";
+            if (workArrangementFilter) workArrangementFilter.value = "";
+            if (minPayFilter) minPayFilter.value = "";
+            if (sortByFilter) sortByFilter.value = "date";
+            currentPage = 1;
+            applyFiltersAndSort();
+          });
+        }
 
         // Functions
         function applyFiltersAndSort() {
           // Apply filters
           let filteredJobs = jobs.filter((job) => {
-            const searchTerm = searchInput.value.toLowerCase();
-            const jobType = jobTypeFilter.value.toLowerCase();
-            const workArrangement = workArrangementFilter.value.toLowerCase();
-            const minPay = minPayFilter.value
-              ? parseFloat(minPayFilter.value)
-              : 0;
+            const searchTerm = searchInput
+              ? searchInput.value.toLowerCase()
+              : "";
+            const jobType = jobTypeFilter
+              ? jobTypeFilter.value.toLowerCase()
+              : "";
+            const workArrangement = workArrangementFilter
+              ? workArrangementFilter.value.toLowerCase()
+              : "";
+            const minPay =
+              minPayFilter && minPayFilter.value
+                ? parseFloat(minPayFilter.value)
+                : 0;
 
             // Search term filter
             const matchesSearch =
@@ -646,7 +728,7 @@
           });
 
           // Apply sorting
-          const sortType = sortByFilter.value;
+          const sortType = sortByFilter ? sortByFilter.value : "date";
 
           switch (sortType) {
             case "date":
@@ -677,6 +759,8 @@
         }
 
         function renderJobs() {
+          if (!jobListingsElement) return;
+
           jobListingsElement.innerHTML = "";
 
           if (currentJobs.length === 0) {
@@ -759,6 +843,8 @@
         }
 
         function renderPagination() {
+          if (!paginationElement) return;
+
           paginationElement.innerHTML = "";
 
           if (currentJobs.length === 0) {
