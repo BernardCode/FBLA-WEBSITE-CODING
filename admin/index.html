@@ -15,6 +15,39 @@
     />
   </head>
   <body>
+    <!-- Password protection overlay -->
+    <div
+      id="authOverlay"
+      style="
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        background: #fff;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        z-index: 9999;
+      "
+    >
+      <h2>Enter Admin Password</h2>
+      <input
+        type="password"
+        id="adminPassword"
+        placeholder="Password"
+        style="padding: 10px; margin: 10px; font-size: 16px"
+      />
+      <button
+        onclick="verifyPassword()"
+        style="padding: 10px 20px; font-size: 16px"
+      >
+        Enter
+      </button>
+      <p id="authError" style="color: red"></p>
+    </div>
+
     <div class="dashboard-container">
       <main class="main-content">
         <header class="dashboard-header">
@@ -64,7 +97,7 @@
       </main>
     </div>
 
-    <!-- Basic Modal Structure for Detail View -->
+    <!-- Modal -->
     <div class="modal" id="jobModal">
       <div class="modal-content">
         <div class="modal-header">
@@ -170,6 +203,18 @@
 
       function closeModal() {
         jobModal.classList.remove("show");
+      }
+
+      function verifyPassword() {
+        const correctPassword = "admin123"; // Set your password here
+        const input = document.getElementById("adminPassword").value;
+        const error = document.getElementById("authError");
+
+        if (input === correctPassword) {
+          document.getElementById("authOverlay").style.display = "none";
+        } else {
+          error.textContent = "Incorrect password. Try again.";
+        }
       }
 
       renderJobs();
