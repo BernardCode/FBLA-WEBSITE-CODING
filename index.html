@@ -9,12 +9,47 @@
       // Dropdown toggle
       function toggleDropdown() {
         const dropdown = document.getElementById("dropdown");
-        if (dropdown.style.display === "block") {
-          dropdown.style.display = "none";
+        const loginButton = document.getElementById("login-button");
+
+        // Add pulse animation class to button
+        loginButton.classList.add("clicked");
+
+        // Remove the animation class after animation completes
+        setTimeout(() => {
+          loginButton.classList.remove("clicked");
+        }, 500);
+
+        // Toggle dropdown
+        if (dropdown.classList.contains("active")) {
+          dropdown.classList.remove("active");
         } else {
-          dropdown.style.display = "block";
+          dropdown.classList.add("active");
         }
       }
+
+      // Close dropdown when clicking outside
+      document.addEventListener("click", function (event) {
+        const dropdown = document.getElementById("dropdown");
+        const loginButton = document.getElementById("login-button");
+
+        if (
+          dropdown.classList.contains("active") &&
+          !dropdown.contains(event.target) &&
+          event.target !== loginButton
+        ) {
+          dropdown.classList.remove("active");
+        }
+      });
+
+      // Prevent the document click event from triggering when clicking on the dropdown itself
+      document.addEventListener("DOMContentLoaded", function () {
+        const dropdown = document.getElementById("dropdown");
+        if (dropdown) {
+          dropdown.addEventListener("click", function (event) {
+            event.stopPropagation();
+          });
+        }
+      });
 
       // Scroll effects
       document.addEventListener("DOMContentLoaded", function () {
@@ -113,8 +148,8 @@
     <section id="hero" class="hero-section">
       <div class="hero-content">
         <h1>
-          Launch Your <span class="highlight">Career Journey</span> With
-          Confidence
+          Launch Your
+          <span class="gradient-highlight">Career Journey</span> With Confidence
         </h1>
         <p>
           Connect with top employers and discover exciting opportunities
@@ -319,42 +354,65 @@
         </p>
       </div>
 
-      <div class="employers-grid">
-        <div class="employer-logo">
-          <img src="/assets/img/google.png" alt="Google" />
-        </div>
-        <div class="employer-logo">
-          <img src="/assets/img/apple.png" alt="Apple" />
-        </div>
-        <div class="employer-logo">
-          <img src="/assets/img/meta.png" alt="Meta" />
-        </div>
-        <div class="employer-logo">
-          <img src="/assets/img/microsoft.png" alt="Microsoft" />
-        </div>
-        <div class="employer-logo">
-          <img src="/assets/img/adobe.png" alt="Adobe" />
-        </div>
-        <div class="employer-logo">
-          <img src="/assets/img/cisco.png" alt="Cisco" />
-        </div>
-        <div class="employer-logo">
-          <img src="/assets/img/intel.png" alt="Intel" />
-        </div>
-        <div class="employer-logo">
-          <img src="/assets/img/nvidia.png" alt="Nvidia" />
-        </div>
-        <div class="employer-logo">
-          <img src="/assets/img/oracle.png" alt="Oracle" />
-        </div>
-        <div class="employer-logo">
-          <img src="/assets/img/tesla.png" alt="Tesla" />
-        </div>
-        <div class="employer-logo">
-          <img src="/assets/img/ibm.png" alt="IBM" />
-        </div>
-        <div class="employer-logo">
-          <img src="/assets/img/salesforce.png" alt="Salesforce" />
+      <div class="employers-container">
+        <div class="employers-scroll">
+          <!-- First set of logos -->
+          <div class="employer-logo">
+            <img src="/assets/img/google.png" alt="Google" />
+          </div>
+          <div class="employer-logo">
+            <img src="/assets/img/apple.png" alt="Apple" />
+          </div>
+          <div class="employer-logo">
+            <img src="/assets/img/meta.png" alt="Meta" />
+          </div>
+          <div class="employer-logo">
+            <img src="/assets/img/microsoft.png" alt="Microsoft" />
+          </div>
+          <div class="employer-logo">
+            <img src="/assets/img/adobe.png" alt="Adobe" />
+          </div>
+          <div class="employer-logo">
+            <img src="/assets/img/cisco.png" alt="Cisco" />
+          </div>
+          <div class="employer-logo">
+            <img src="/assets/img/intel.png" alt="Intel" />
+          </div>
+          <div class="employer-logo">
+            <img src="/assets/img/nvidia.png" alt="Nvidia" />
+          </div>
+          <div class="employer-logo">
+            <img src="/assets/img/oracle.png" alt="Oracle" />
+          </div>
+          <div class="employer-logo">
+            <img src="/assets/img/tesla.png" alt="Tesla" />
+          </div>
+          <div class="employer-logo">
+            <img src="/assets/img/ibm.png" alt="IBM" />
+          </div>
+          <div class="employer-logo">
+            <img src="/assets/img/salesforce.png" alt="Salesforce" />
+          </div>
+
+          <!-- Duplicate logos for seamless scrolling -->
+          <div class="employer-logo">
+            <img src="/assets/img/google.png" alt="Google" />
+          </div>
+          <div class="employer-logo">
+            <img src="/assets/img/apple.png" alt="Apple" />
+          </div>
+          <div class="employer-logo">
+            <img src="/assets/img/meta.png" alt="Meta" />
+          </div>
+          <div class="employer-logo">
+            <img src="/assets/img/microsoft.png" alt="Microsoft" />
+          </div>
+          <div class="employer-logo">
+            <img src="/assets/img/adobe.png" alt="Adobe" />
+          </div>
+          <div class="employer-logo">
+            <img src="/assets/img/cisco.png" alt="Cisco" />
+          </div>
         </div>
       </div>
     </section>
@@ -378,7 +436,7 @@
 
         <div class="stat-card">
           <h3>Average Salary</h3>
-          <div class="stat-value">$75K</div>
+          <div class="stat-value">$65K</div>
           <p>For full-time positions after graduation</p>
         </div>
 
@@ -406,9 +464,25 @@
         </p>
         <div class="cta-buttons">
           <a href="pages/jobs.html" class="cta-primary">View Job Board</a>
-          <a href="pages/profile.html" class="cta-secondary">Create Your Profile</a>
+          <a href="pages/profile.html" class="cta-secondary"
+            >Create Your Profile</a
+          >
         </div>
       </div>
     </section>
+
+    <!-- Footer -->
+    <footer>
+      <div class="footer-links">
+        <a href="#">About Us</a>
+        <a href="#">Privacy Policy</a>
+        <a href="#">Terms of Service</a>
+        <a href="#">Contact</a>
+        <a href="#">FAQ</a>
+      </div>
+      <div class="copyright">
+        &copy; 2025 Cupertino High CareerBridge. All rights reserved.
+      </div>
+    </footer>
   </body>
 </html>

@@ -3,70 +3,860 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>CareerBridge Employer - Job Listing</title>
+    <title>CareerBridge - Employer Dashboard</title>
     <link rel="stylesheet" href="../assets/css/employer.css" />
-    <style>
-      /* Additional styles for loading and error states */
-      .loading-message,
-      .error-message,
-      .empty-message {
-        padding: 30px;
-        text-align: center;
-        color: #666;
-        font-size: 16px;
-      }
-
-      .error-message {
-        color: #e53e3e;
-      }
-
-      .empty-message a {
-        color: #4a6cf7;
-        text-decoration: none;
-        font-weight: 500;
-      }
-
-      .empty-message a:hover {
-        text-decoration: underline;
-      }
-    </style>
+    <link
+      href="https://fonts.googleapis.com/icon?family=Material+Icons"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
   </head>
   <body>
-    <div class="container">
-      <!-- Header -->
-      <header class="header">
-        <h1 class="header-title">CareerBridge Employer</h1>
-        <div class="user-info">
-          <div class="avatar">BF</div>
-          <div>
-            <div class="user-name">Bernard Freund</div>
-            <div class="user-role">Employer</div>
+    <div class="dashboard-container">
+      <!-- Main Content -->
+      <main class="main-content">
+        <!-- Header -->
+        <header class="dashboard-header">
+          <div class="header-left">
+            <h1>Employer Dashboard</h1>
+            <p class="subtitle">Manage your job listings and applications</p>
           </div>
-        </div>
-      </header>
 
-      <!-- Job Card -->
-      <div class="job-card">
-        <div class="card-header">
-          <div>Job Listing</div>
-          <a href="create-job.html" class="add-button"
-            ><span>+</span> Add New Job</a
-          >
+          <div class="header-right">
+            <div class="user-profile">
+              <div class="avatar">BF</div>
+              <div class="user-info">
+                <p class="user-name">Bernard Freund</p>
+                <p class="user-role">Recruiter</p>
+              </div>
+            </div>
+          </div>
+        </header>
+
+        <!-- Active Jobs Section -->
+        <section class="jobs-section">
+          <div class="section-header">
+            <h2>Active Job Listings</h2>
+            <button id="createJobBtn" class="btn primary-btn">
+              <span class="material-icons">add</span>
+              Create New Job
+            </button>
+          </div>
+
+          <div class="job-filters">
+            <div class="filter-group search">
+              <span class="material-icons">search</span>
+              <input
+                type="text"
+                id="jobSearchInput"
+                placeholder="Search job titles..."
+                class="filter-input"
+              />
+            </div>
+
+            <div class="filter-group">
+              <select class="filter-select" id="jobTypeFilter">
+                <option value="">All Job Types</option>
+                <option value="Full-Time">Full-Time</option>
+                <option value="Part-Time">Part-Time</option>
+                <option value="Internship">Internship</option>
+                <option value="Contract">Contract</option>
+              </select>
+            </div>
+
+            <div class="filter-group">
+              <select class="filter-select" id="arrangementFilter">
+                <option value="">All Arrangements</option>
+                <option value="Remote">Remote</option>
+                <option value="Hybrid">Hybrid</option>
+                <option value="In-Person">In-Person</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="job-cards" id="jobListings">
+            <!-- Job listings will be dynamically populated here -->
+          </div>
+
+          <div class="pagination" id="pagination">
+            <!-- Pagination will be dynamically generated -->
+          </div>
+        </section>
+
+        <!-- Recent Applications Section -->
+        <section class="applications-section">
+          <div class="section-header">
+            <h2>Applications</h2>
+          </div>
+
+          <div class="applications-table-container">
+            <table class="applications-table">
+              <thead>
+                <tr>
+                  <th>Applicant</th>
+                  <th>Position</th>
+                  <th>Applied Date</th>
+                  <th>Status</th>
+                  <th>Resume</th>
+                  <th>Actions</th>
+                </tr>
+              </thead>
+
+              <tbody>
+                <tr>
+                  <td class="applicant-cell">
+                    <div class="applicant-info">
+                      <div class="applicant-avatar">EC</div>
+                      <div>
+                        <p class="applicant-name">Emily Chen</p>
+                        <p class="applicant-email">emily.chen@example.com</p>
+                      </div>
+                    </div>
+                  </td>
+                  <td>Frontend Developer</td>
+                  <td>April 15, 2025</td>
+                  <td>
+                    <span class="status-badge review">Under Review</span>
+                  </td>
+                  <td>
+                    <a href="#" class="resume-link">
+                      <span class="material-icons">description</span>
+                      View
+                    </a>
+                  </td>
+                  <td>
+                    <div class="action-buttons">
+                      <button class="btn icon-btn">
+                        <span class="material-icons">visibility</span>
+                      </button>
+                      <button class="btn icon-btn">
+                        <span class="material-icons">event</span>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+
+                <tr>
+                  <td class="applicant-cell">
+                    <div class="applicant-info">
+                      <div class="applicant-avatar">MZ</div>
+                      <div>
+                        <p class="applicant-name">Michael Zhang</p>
+                        <p class="applicant-email">michael.zhang@example.com</p>
+                      </div>
+                    </div>
+                  </td>
+                  <td>UI/UX Design Assistant</td>
+                  <td>April 18, 2025</td>
+                  <td>
+                    <span class="status-badge review">Under Review</span>
+                  </td>
+                  <td>
+                    <a href="#" class="resume-link">
+                      <span class="material-icons">description</span>
+                      View
+                    </a>
+                  </td>
+                  <td>
+                    <div class="action-buttons">
+                      <button class="btn icon-btn">
+                        <span class="material-icons">visibility</span>
+                      </button>
+                      <button class="btn icon-btn">
+                        <span class="material-icons">event</span>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+
+                <tr>
+                  <td class="applicant-cell">
+                    <div class="applicant-info">
+                      <div class="applicant-avatar">SP</div>
+                      <div>
+                        <p class="applicant-name">Sophia Patel</p>
+                        <p class="applicant-email">sophia.patel@example.com</p>
+                      </div>
+                    </div>
+                  </td>
+                  <td>Data Science Intern</td>
+                  <td>April 20, 2025</td>
+                  <td>
+                    <span class="status-badge interview"
+                      >Interview Scheduled</span
+                    >
+                  </td>
+                  <td>
+                    <a href="#" class="resume-link">
+                      <span class="material-icons">description</span>
+                      View
+                    </a>
+                  </td>
+                  <td>
+                    <div class="action-buttons">
+                      <button class="btn icon-btn">
+                        <span class="material-icons">visibility</span>
+                      </button>
+                      <button class="btn icon-btn">
+                        <span class="material-icons">event</span>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <!-- Create/Edit Job Modal -->
+    <div id="jobModal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2 id="modalTitle">Create New Job Listing</h2>
+          <button class="close-modal" id="closeModal">
+            <span class="material-icons">close</span>
+          </button>
         </div>
 
-        <div class="job-content">
-          <!-- Dynamic job content will be inserted here by JavaScript -->
+        <div class="modal-body">
+          <form id="jobForm">
+            <input type="hidden" id="jobId" />
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="jobTitle">Job Title*</label>
+                <input
+                  type="text"
+                  id="jobTitle"
+                  required
+                  placeholder="e.g. Frontend Developer"
+                />
+              </div>
+
+              <div class="form-group">
+                <label for="jobType">Job Type*</label>
+                <select id="jobType" required>
+                  <option value="" selected disabled>Select job type</option>
+                  <option value="Full-Time">Full-Time</option>
+                  <option value="Part-Time">Part-Time</option>
+                  <option value="Internship">Internship</option>
+                  <option value="Contract">Contract</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="workArrangement">Work Arrangement*</label>
+                <select id="workArrangement" required>
+                  <option value="" selected disabled>Select arrangement</option>
+                  <option value="Remote">Remote</option>
+                  <option value="Hybrid">Hybrid</option>
+                  <option value="In-Person">In-Person</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label for="location">Location</label>
+                <input
+                  type="text"
+                  id="location"
+                  placeholder="e.g. San Francisco, CA"
+                />
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label for="minPay">Minimum Pay ($)</label>
+                <input type="number" id="minPay" placeholder="e.g. 60000" />
+              </div>
+
+              <div class="form-group">
+                <label for="maxPay">Maximum Pay ($)</label>
+                <input type="number" id="maxPay" placeholder="e.g. 80000" />
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label for="jobDescription">Job Description*</label>
+              <textarea
+                id="jobDescription"
+                rows="5"
+                required
+                placeholder="Describe the job responsibilities, requirements, and any other relevant details..."
+              ></textarea>
+            </div>
+
+            <div class="form-group">
+              <label for="skills">Required Skills (comma separated)</label>
+              <input
+                type="text"
+                id="skills"
+                placeholder="e.g. JavaScript, React, HTML, CSS"
+              />
+            </div>
+
+            <div class="form-group">
+              <label for="applicationDeadline">Application Deadline</label>
+              <input type="date" id="applicationDeadline" />
+            </div>
+          </form>
+        </div>
+
+        <div class="modal-footer">
+          <button class="btn secondary-btn" id="cancelBtn">Cancel</button>
+          <button class="btn primary-btn" id="saveJobBtn">Save Job</button>
         </div>
       </div>
     </div>
 
+    <!-- Delete Confirmation Modal -->
+    <div id="deleteModal" class="modal">
+      <div class="modal-content delete-modal">
+        <div class="modal-header">
+          <h2>Delete Job Listing</h2>
+          <button class="close-modal" id="closeDeleteModal">
+            <span class="material-icons">close</span>
+          </button>
+        </div>
+
+        <div class="modal-body">
+          <div class="delete-warning">
+            <span class="material-icons warning-icon">warning</span>
+            <p>
+              Are you sure you want to delete this job listing? This action
+              cannot be undone.
+            </p>
+          </div>
+          <p class="delete-job-title" id="deleteJobTitle"></p>
+        </div>
+
+        <div class="modal-footer">
+          <button class="btn secondary-btn" id="cancelDeleteBtn">Cancel</button>
+          <button class="btn danger-btn" id="confirmDeleteBtn">Delete</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Notification -->
+    <div id="notification" class="notification">
+      <span class="material-icons" id="notificationIcon">check_circle</span>
+      <p id="notificationMessage"></p>
+    </div>
+
+    <!-- JavaScript -->
     <script>
-      function toggleJobDetails(jobId) {
-        const jobItem = document.getElementById(jobId);
-        jobItem.classList.toggle("active");
-      }
+      document.addEventListener("DOMContentLoaded", function () {
+        // Sample job data
+        let jobs = [
+          {
+            id: 1,
+            title: "Frontend Developer",
+            type: "Full-Time",
+            arrangement: "Remote",
+            location: "Remote",
+            minPay: 80000,
+            maxPay: 95000,
+            description:
+              "We are looking for a talented Frontend Developer to join our team. The ideal candidate will have experience with modern JavaScript frameworks and a strong understanding of responsive design principles.",
+            skills: "JavaScript, React, CSS, HTML5",
+            applicationDeadline: "2025-06-15",
+            applications: 24,
+            postedDate: "Apr 10, 2025",
+          },
+          {
+            id: 2,
+            title: "UI/UX Design Assistant",
+            type: "Part-Time",
+            arrangement: "In-Person",
+            location: "Cupertino, CA",
+            minPay: 25,
+            maxPay: 35,
+            description:
+              "Support our design team in creating beautiful, intuitive interfaces for Apple products. Learn industry-best practices while contributing to real projects.",
+            skills: "Figma, Adobe XD, Prototyping, UI Design",
+            applicationDeadline: "2025-05-30",
+            applications: 42,
+            postedDate: "Apr 15, 2025",
+          },
+          {
+            id: 3,
+            title: "Data Science Intern",
+            type: "Internship",
+            arrangement: "Remote",
+            location: "Remote",
+            minPay: 35,
+            maxPay: 45,
+            description:
+              "Work with our data science team to analyze large datasets and help extract meaningful insights. You'll learn how to apply machine learning algorithms to solve real-world problems.",
+            skills: "Python, Machine Learning, SQL, Data Analysis",
+            applicationDeadline: "2025-05-25",
+            applications: 36,
+            postedDate: "Apr 20, 2025",
+          },
+          {
+            id: 4,
+            title: "Marketing Assistant",
+            type: "Part-Time",
+            arrangement: "Hybrid",
+            location: "San Francisco, CA",
+            minPay: 22,
+            maxPay: 28,
+            description:
+              "Support our marketing team in creating engaging content for social media, email campaigns, and promotional materials. Help analyze marketing metrics and provide insights.",
+            skills: "Social Media, Content Writing, Analytics, Photoshop",
+            applicationDeadline: "2025-06-05",
+            applications: 18,
+            postedDate: "Apr 18, 2025",
+          },
+          {
+            id: 5,
+            title: "Software Engineer",
+            type: "Full-Time",
+            arrangement: "Hybrid",
+            location: "Mountain View, CA",
+            minPay: 110000,
+            maxPay: 135000,
+            description:
+              "Develop and maintain server-side applications. Design, implement, and optimize backend systems that power our user-facing applications.",
+            skills: "Java, Python, AWS, Microservices",
+            applicationDeadline: "2025-06-20",
+            applications: 31,
+            postedDate: "Apr 13, 2025",
+          },
+        ];
+
+        // Elements
+        const jobListings = document.getElementById("jobListings");
+        const pagination = document.getElementById("pagination");
+        const jobForm = document.getElementById("jobForm");
+        const jobModal = document.getElementById("jobModal");
+        const modalTitle = document.getElementById("modalTitle");
+        const saveJobBtn = document.getElementById("saveJobBtn");
+        const deleteModal = document.getElementById("deleteModal");
+        const deleteJobTitle = document.getElementById("deleteJobTitle");
+        const confirmDeleteBtn = document.getElementById("confirmDeleteBtn");
+        const jobSearchInput = document.getElementById("jobSearchInput");
+        const jobTypeFilter = document.getElementById("jobTypeFilter");
+        const arrangementFilter = document.getElementById("arrangementFilter");
+
+        // State variables
+        let currentJobs = [...jobs];
+        let currentPage = 1;
+        let jobsPerPage = 6;
+        let jobToDelete = null;
+        let isEditing = false;
+
+        // Initialize
+        renderJobs();
+
+        // Event Listeners
+        // Search and filters
+        jobSearchInput.addEventListener("input", applyFilters);
+        jobTypeFilter.addEventListener("change", applyFilters);
+        arrangementFilter.addEventListener("change", applyFilters);
+
+        // Create job button
+        document
+          .getElementById("createJobBtn")
+          .addEventListener("click", function () {
+            isEditing = false;
+            modalTitle.textContent = "Create New Job Listing";
+            saveJobBtn.textContent = "Create Job";
+            jobForm.reset();
+            document.getElementById("jobId").value = "";
+            jobModal.classList.add("show");
+          });
+
+        // Close modal buttons
+        document
+          .getElementById("closeModal")
+          .addEventListener("click", closeJobModal);
+        document
+          .getElementById("cancelBtn")
+          .addEventListener("click", closeJobModal);
+        document
+          .getElementById("closeDeleteModal")
+          .addEventListener("click", closeDeleteModal);
+        document
+          .getElementById("cancelDeleteBtn")
+          .addEventListener("click", closeDeleteModal);
+
+        // Close modals when clicking outside
+        window.addEventListener("click", function (event) {
+          if (event.target === jobModal) {
+            closeJobModal();
+          }
+          if (event.target === deleteModal) {
+            closeDeleteModal();
+          }
+        });
+
+        // Save job
+        saveJobBtn.addEventListener("click", function () {
+          if (jobForm.checkValidity()) {
+            saveJob();
+          } else {
+            // Trigger HTML5 validation
+            const firstInvalidField = jobForm.querySelector(":invalid");
+            if (firstInvalidField) {
+              firstInvalidField.focus();
+            }
+          }
+        });
+
+        // Confirm delete
+        confirmDeleteBtn.addEventListener("click", function () {
+          deleteJob();
+        });
+
+        // Functions
+        function applyFilters() {
+          const searchTerm = jobSearchInput.value.toLowerCase();
+          const jobType = jobTypeFilter.value;
+          const arrangement = arrangementFilter.value;
+
+          currentJobs = jobs.filter((job) => {
+            const matchesSearch =
+              !searchTerm ||
+              job.title.toLowerCase().includes(searchTerm) ||
+              job.skills.toLowerCase().includes(searchTerm);
+
+            const matchesType = !jobType || job.type === jobType;
+            const matchesArrangement =
+              !arrangement || job.arrangement === arrangement;
+
+            return matchesSearch && matchesType && matchesArrangement;
+          });
+
+          currentPage = 1;
+          renderJobs();
+        }
+
+        function renderJobs() {
+          jobListings.innerHTML = "";
+
+          if (currentJobs.length === 0) {
+            jobListings.innerHTML = `
+            <div class="no-jobs-message">
+              <span class="material-icons">search_off</span>
+              <h3>No job listings found</h3>
+              <p>Try adjusting your search criteria or create a new job listing.</p>
+            </div>
+          `;
+            pagination.innerHTML = "";
+            return;
+          }
+
+          // Calculate pagination
+          const totalPages = Math.ceil(currentJobs.length / jobsPerPage);
+          const startIndex = (currentPage - 1) * jobsPerPage;
+          const endIndex = Math.min(
+            startIndex + jobsPerPage,
+            currentJobs.length
+          );
+          const jobsToShow = currentJobs.slice(startIndex, endIndex);
+
+          // Create job cards
+          jobsToShow.forEach((job) => {
+            const formattedPay = formatPayRange(job.minPay, job.maxPay);
+
+            const jobCard = document.createElement("div");
+            jobCard.className = "job-card";
+            jobCard.innerHTML = `
+            <div class="job-card-header">
+              <h3 class="job-title">${job.title}</h3>
+              <div class="job-tags">
+                <span class="job-tag type">${job.type}</span>
+                <span class="job-tag status">Active</span>
+              </div>
+            </div>
+            
+            <div class="job-card-body">
+              <div class="job-detail">
+                <span class="material-icons">place</span>
+                <span>${job.location}</span>
+              </div>
+              
+              <div class="job-detail">
+                <span class="material-icons">payments</span>
+                <span>${formattedPay}</span>
+              </div>
+              
+              <div class="job-detail">
+                <span class="material-icons">event</span>
+                <span>Posted ${job.postedDate}</span>
+              </div>
+            </div>
+            
+            <div class="job-card-footer">
+              <div class="application-count">
+                <span class="material-icons">people</span>
+                <span>${job.applications} Applications</span>
+              </div>
+              
+              <div class="job-actions">
+                <button class="btn icon-btn edit-btn" data-id="${job.id}">
+                  <span class="material-icons">edit</span>
+                </button>
+                <button class="btn icon-btn delete-btn" data-id="${job.id}">
+                  <span class="material-icons">delete</span>
+                </button>
+              </div>
+            </div>
+          `;
+
+            jobListings.appendChild(jobCard);
+          });
+
+          // Add event listeners to buttons
+          document.querySelectorAll(".edit-btn").forEach((button) => {
+            button.addEventListener("click", function () {
+              const jobId = parseInt(this.getAttribute("data-id"));
+              editJob(jobId);
+            });
+          });
+
+          document.querySelectorAll(".delete-btn").forEach((button) => {
+            button.addEventListener("click", function () {
+              const jobId = parseInt(this.getAttribute("data-id"));
+              showDeleteConfirmation(jobId);
+            });
+          });
+
+          // Render pagination
+          renderPagination(totalPages);
+        }
+
+        function renderPagination(totalPages) {
+          pagination.innerHTML = "";
+
+          if (totalPages <= 1) {
+            return;
+          }
+
+          // Previous button
+          const prevButton = document.createElement("button");
+          prevButton.className = "pagination-btn";
+          prevButton.innerHTML =
+            '<span class="material-icons">chevron_left</span>';
+          prevButton.disabled = currentPage === 1;
+          prevButton.addEventListener("click", () => {
+            if (currentPage > 1) {
+              currentPage--;
+              renderJobs();
+            }
+          });
+          pagination.appendChild(prevButton);
+
+          // Page numbers
+          for (let i = 1; i <= totalPages; i++) {
+            const pageButton = document.createElement("button");
+            pageButton.className = `pagination-btn ${
+              i === currentPage ? "active" : ""
+            }`;
+            pageButton.textContent = i;
+            pageButton.addEventListener("click", () => {
+              currentPage = i;
+              renderJobs();
+            });
+            pagination.appendChild(pageButton);
+          }
+
+          // Next button
+          const nextButton = document.createElement("button");
+          nextButton.className = "pagination-btn";
+          nextButton.innerHTML =
+            '<span class="material-icons">chevron_right</span>';
+          nextButton.disabled = currentPage === totalPages;
+          nextButton.addEventListener("click", () => {
+            if (currentPage < totalPages) {
+              currentPage++;
+              renderJobs();
+            }
+          });
+          pagination.appendChild(nextButton);
+        }
+
+        function editJob(jobId) {
+          const job = jobs.find((j) => j.id === jobId);
+          if (!job) return;
+
+          isEditing = true;
+          modalTitle.textContent = "Edit Job Listing";
+          saveJobBtn.textContent = "Save Changes";
+
+          // Fill form with job data
+          document.getElementById("jobId").value = job.id;
+          document.getElementById("jobTitle").value = job.title;
+          document.getElementById("jobType").value = job.type;
+          document.getElementById("workArrangement").value = job.arrangement;
+          document.getElementById("location").value = job.location;
+          document.getElementById("minPay").value = job.minPay;
+          document.getElementById("maxPay").value = job.maxPay;
+          document.getElementById("jobDescription").value = job.description;
+          document.getElementById("skills").value = job.skills;
+          document.getElementById("applicationDeadline").value =
+            job.applicationDeadline;
+
+          jobModal.classList.add("show");
+        }
+
+        function saveJob() {
+          // Collect form data
+          const jobId = document.getElementById("jobId").value;
+          const formData = {
+            title: document.getElementById("jobTitle").value,
+            type: document.getElementById("jobType").value,
+            arrangement: document.getElementById("workArrangement").value,
+            location:
+              document.getElementById("location").value ||
+              document.getElementById("workArrangement").value,
+            minPay: parseFloat(document.getElementById("minPay").value) || 0,
+            maxPay: parseFloat(document.getElementById("maxPay").value) || 0,
+            description: document.getElementById("jobDescription").value,
+            skills: document.getElementById("skills").value,
+            applicationDeadline: document.getElementById("applicationDeadline")
+              .value,
+          };
+
+          if (isEditing) {
+            // Update existing job
+            const index = jobs.findIndex((job) => job.id === parseInt(jobId));
+            if (index !== -1) {
+              const updatedJob = { ...jobs[index], ...formData };
+              jobs[index] = updatedJob;
+              showNotification("Job listing updated successfully!", "success");
+            }
+          } else {
+            // Add new job
+            const newJob = {
+              id:
+                jobs.length > 0
+                  ? Math.max(...jobs.map((job) => job.id)) + 1
+                  : 1,
+              ...formData,
+              applications: 0,
+              postedDate: formatDate(new Date()),
+            };
+
+            jobs.unshift(newJob); // Add to beginning of array
+            showNotification("Job listing created successfully!", "success");
+          }
+
+          closeJobModal();
+          applyFilters(); // Re-apply filters to update listings
+        }
+
+        function showDeleteConfirmation(jobId) {
+          const job = jobs.find((j) => j.id === jobId);
+          if (!job) return;
+
+          jobToDelete = jobId;
+          deleteJobTitle.textContent = job.title;
+          deleteModal.classList.add("show");
+        }
+
+        function deleteJob() {
+          if (jobToDelete) {
+            jobs = jobs.filter((job) => job.id !== jobToDelete);
+            showNotification("Job listing deleted successfully!", "success");
+            jobToDelete = null;
+            closeDeleteModal();
+            applyFilters(); // Re-apply filters to update listings
+          }
+        }
+
+        function closeJobModal() {
+          jobModal.classList.remove("show");
+          jobForm.reset();
+        }
+
+        function closeDeleteModal() {
+          deleteModal.classList.remove("show");
+        }
+
+        function showNotification(message, type = "success") {
+          const notification = document.getElementById("notification");
+          const icon = document.getElementById("notificationIcon");
+          const text = document.getElementById("notificationMessage");
+
+          // Set message and icon
+          text.textContent = message;
+
+          if (type === "success") {
+            notification.className = "notification success";
+            icon.textContent = "check_circle";
+          } else {
+            notification.className = "notification error";
+            icon.textContent = "error";
+          }
+
+          // Show notification
+          notification.classList.add("show");
+
+          // Hide after 3 seconds
+          setTimeout(() => {
+            notification.classList.remove("show");
+          }, 3000);
+        }
+
+        // Helper functions
+        function formatPayRange(min, max) {
+          if (!min && !max) return "Unpaid";
+
+          if (min >= 1000) {
+            // Format as yearly salary
+            const minFormatted =
+              min >= 1000 ? `$${(min / 1000).toFixed(0)}K` : `$${min}`;
+            const maxFormatted =
+              max >= 1000 ? `$${(max / 1000).toFixed(0)}K` : `$${max}`;
+
+            if (min && max) {
+              return `${minFormatted} - ${maxFormatted}`;
+            } else if (min) {
+              return `From ${minFormatted}`;
+            } else {
+              return `Up to ${maxFormatted}`;
+            }
+          } else {
+            // Format as hourly rate
+            if (min && max) {
+              return `$${min} - $${max}/hr`;
+            } else if (min) {
+              return `From $${min}/hr`;
+            } else {
+              return `Up to $${max}/hr`;
+            }
+          }
+        }
+
+        function formatDate(date) {
+          const months = [
+            "Jan",
+            "Feb",
+            "Mar",
+            "Apr",
+            "May",
+            "Jun",
+            "Jul",
+            "Aug",
+            "Sep",
+            "Oct",
+            "Nov",
+            "Dec",
+          ];
+          return `${
+            months[date.getMonth()]
+          } ${date.getDate()}, ${date.getFullYear()}`;
+        }
+      });
     </script>
-    <!-- Add the employer.js script -->
-    <script src="employer.js"></script>
   </body>
 </html>

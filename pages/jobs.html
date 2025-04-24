@@ -1,569 +1,943 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>CareerBridge - Job Listings</title>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CareerBridge - Job Listings</title>
+    <link rel="stylesheet" href="../assets/css/jobs.css" />
+    <link
+      href="https://fonts.googleapis.com/icon?family=Material+Icons"
+      rel="stylesheet"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <div class="container">
+      <!-- Header -->
+      <header class="header">
+        <a href="index.html" class="logo">
+          <img src="assets/img/dusty.webp" alt="CareerBridge Logo" />
+          <span
+            >Cupertino High <span class="highlight">CareerBridge</span></span
+          >
+        </a>
+        <nav class="nav-links">
+          <a href="index.html" class="nav-link">Home</a>
+          <a href="jobs.html" class="nav-link active">Find Jobs</a>
+          <a href="profile.html" class="nav-link">Profile</a>
+          <a href="#" class="nav-link">Companies</a>
+          <a href="#" class="nav-link" id="adminPanelLink">Admin Panel</a>
+        </nav>
+      </header>
 
-  <link rel="stylesheet" href="../assets/css/jobs.css" />
-  
-  <!-- Material Icons -->
-  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
-  <script>
-    document.addEventListener("DOMContentLoaded", function() {
-      // Wait for the page to load before attaching event listeners
-      var adminPanelLink = document.getElementById("adminPanelLink");
-      var adminModal = document.getElementById("adminModal");
-      var closeModalButton = document.getElementById("closeAdminModal");
-      var submitPasswordButton = document.getElementById("submitAdminPassword");
+      <!-- Job Search and Filters -->
+      <div class="search-container">
+        <h1>Find Your Next Opportunity</h1>
+        <p class="subtitle">
+          Browse through <span id="jobCount">0</span> opportunities tailored for
+          Cupertino High students
+        </p>
 
-      // Open modal when "Admin Panel" is clicked
-      adminPanelLink.addEventListener("click", function(event) {
-        event.preventDefault(); // Prevent default navigation
-        adminModal.style.display = "flex"; // Show modal
-      });
-
-      // Close modal when "Cancel" is clicked
-      closeModalButton.addEventListener("click", function() {
-        adminModal.style.display = "none"; // Hide modal
-      });
-
-      // Check password when "Submit" is clicked
-      submitPasswordButton.addEventListener("click", function() {
-        var password = document.getElementById("adminPassword").value;
-        if (password === "admin123") {
-          window.location.href = "admin.html"; // Redirect if correct
-        } else {
-          alert("Incorrect password. Please try again.");
-        }
-      });
-
-      // Close modal if user clicks outside of it
-      window.addEventListener("click", function(event) {
-        if (event.target === adminModal) {
-          adminModal.style.display = "none";
-        }
-      });
-    });
-  </script>
-  <style>
-    /* Base Styles */
-
-    body {
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background-color: #f5f7fb;
-      margin: 0;
-      padding: 0;
-      color: #333;
-      line-height: 1.6;
-    }
-    
-    .container {
-      max-width: 1200px;
-      margin: 0 auto;
-      padding: 20px;
-    }
-    
-    /* Header Styles */
-    .header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 30px;
-    }
-    
-    .logo {
-      font-size: 24px;
-      font-weight: 700;
-      color: #4a6cf7;
-      text-decoration: none;
-    }
-    
-    .nav-links {
-      display: flex;
-      gap: 20px;
-    }
-    
-    .nav-link {
-      color: #4b5563;
-      text-decoration: none;
-      font-weight: 500;
-      transition: color 0.2s;
-    }
-    
-    .nav-link:hover {
-      color: #4a6cf7;
-    }
-    
-    .nav-link.active {
-      color: #4a6cf7;
-      font-weight: 600;
-    }
-    
-    /* Job Search Card */
-    .job-search-card {
-      background-color: white;
-      border-radius: 10px;
-      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
-      margin-bottom: 30px;
-      overflow: hidden;
-    }
-    
-    .search-header {
-      padding: 20px;
-      background-color: #f9f9f9;
-      border-bottom: 1px solid #eaeaea;
-    }
-    
-    .search-title {
-      font-size: 18px;
-      font-weight: 600;
-      margin: 0;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-    
-    .jobs-count {
-      color: #6b7280;
-      font-size: 16px;
-      font-weight: normal;
-    }
-    
-    .search-content {
-      padding: 20px;
-    }
-    
-    .search-bar {
-      position: relative;
-      margin-bottom: 16px;
-    }
-    
-    .search-input {
-      width: 100%;
-      padding: 12px 12px 12px 40px;
-      border: 1px solid #d1d5db;
-      border-radius: 6px;
-      font-size: 16px;
-      outline: none;
-      transition: border-color 0.2s, box-shadow 0.2s;
-    }
-    
-    .search-input:focus {
-      border-color: #4a6cf7;
-      box-shadow: 0 0 0 3px rgba(74, 108, 247, 0.1);
-    }
-    
-    .search-icon {
-      position: absolute;
-      left: 12px;
-      top: 50%;
-      transform: translateY(-50%);
-      color: #9ca3af;
-    }
-    
-    /* Filters Row */
-    .filters-row {
-      display: flex;
-      gap: 16px;
-      align-items: flex-end;
-      flex-wrap: wrap;
-    }
-    
-    .filter-group {
-      flex: 1;
-      min-width: 200px;
-    }
-    
-    .filter-label {
-      display: block;
-      font-size: 14px;
-      font-weight: 500;
-      margin-bottom: 6px;
-      color: #4b5563;
-    }
-    
-    .filter-select, .filter-input {
-      width: 100%;
-      padding: 10px;
-      border: 1px solid #d1d5db;
-      border-radius: 6px;
-      font-size: 14px;
-      background-color: white;
-      outline: none;
-    }
-    
-    .filter-select:focus, .filter-input:focus {
-      border-color: #4a6cf7;
-      box-shadow: 0 0 0 3px rgba(74, 108, 247, 0.1);
-    }
-    
-    .filter-actions {
-      padding-bottom: 0;
-      margin-bottom: 0;
-    }
-    
-    .clear-filters-btn {
-      padding: 10px 16px;
-      background-color: #f3f4f6;
-      color: #4b5563;
-      border: 1px solid #d1d5db;
-      border-radius: 6px;
-      font-size: 14px;
-      font-weight: 500;
-      cursor: pointer;
-      transition: background-color 0.2s;
-    }
-    
-    .clear-filters-btn:hover {
-      background-color: #e5e7eb;
-    }
-    
-    /* Job Listings */
-    .job-listings-container {
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
-    }
-    
-    .job-item {
-      background-color: white;
-      border-radius: 8px;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-      padding: 20px;
-      transition: transform 0.2s, box-shadow 0.2s;
-    }
-    
-    .job-item:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-    }
-    
-    .job-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      margin-bottom: 12px;
-    }
-    
-    .job-title-area {
-      flex: 1;
-    }
-    
-    .job-title {
-      font-size: 18px;
-      font-weight: 600;
-      margin: 0 0 4px 0;
-      color: #111827;
-    }
-    
-    .company-name {
-      font-size: 14px;
-      color: #4b5563;
-    }
-    
-    .job-meta {
-      display: flex;
-      gap: 8px;
-    }
-    
-    .job-type-badge, .job-pay-badge {
-      padding: 6px 12px;
-      border-radius: 16px;
-      font-size: 12px;
-      font-weight: 500;
-      white-space: nowrap;
-    }
-    
-    .job-type-badge {
-      background-color: #eef2ff;
-      color: #4f46e5;
-      border: 1px solid #e0e7ff;
-    }
-    
-    .job-pay-badge {
-      background-color: #ecfdf5;
-      color: #047857;
-      border: 1px solid #d1fae5;
-    }
-    
-    .job-description {
-      color: #4b5563;
-      font-size: 14px;
-      margin-bottom: 16px;
-    }
-    
-    .job-footer {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-    
-    .applications-count {
-      font-size: 12px;
-      color: #6b7280;
-    }
-    
-    .apply-button {
-      background-color: #4a6cf7;
-      color: white;
-      border: none;
-      border-radius: 6px;
-      padding: 8px 16px;
-      font-size: 14px;
-      font-weight: 500;
-      cursor: pointer;
-      transition: background-color 0.2s;
-    }
-    
-    .apply-button:hover {
-      background-color: #3a5ce5;
-    }
-    
-    .applied-button {
-      background-color: #10b981;
-      color: white;
-      border: none;
-      border-radius: 6px;
-      padding: 8px 16px;
-      font-size: 14px;
-      font-weight: 500;
-      cursor: default;
-      opacity: 0.9;
-    }
-    
-    /* Messages */
-    .loading-message, .error-message, .empty-message {
-      text-align: center;
-      padding: 40px 20px;
-      color: #6b7280;
-    }
-    
-    .error-message {
-      color: #b91c1c;
-    }
-    
-    .empty-message a {
-      color: #4a6cf7;
-      text-decoration: none;
-      font-weight: 500;
-    }
-    
-    /* Responsive Design */
-    @media (max-width: 768px) {
-      .job-header {
-        flex-direction: column;
-        gap: 12px;
-      }
-      
-      .job-meta {
-        align-self: flex-start;
-      }
-      
-      .filters-row {
-        flex-direction: column;
-        gap: 12px;
-      }
-      
-      .filter-group {
-        width: 100%;
-      }
-    }
-  </style>
-</head>
-<body>
-  <div class="container">
-    <!-- Header -->
-    <header class="header">
-      <a href="../index.html" class="logo">CareerBridge</a>
-      <nav class="nav-links">
-        <a href="#" class="nav-link active">Find Jobs</a>
-        <a href="#" class="nav-link">Companies</a>
-        <a href="#" class="nav-link">Career Resources</a>
-        <a href="#" class="nav-link">Post a Job</a>
-        <a href="#" class="nav-link" id="adminPanelLink">Admin Panel</a>
-      </nav>
-    </header>
-    
-    <!-- Job Search Card -->
-    <div class="job-search-card">
-      <div class="search-header">
-        <h2 class="search-title">
-          Available Jobs <span class="jobs-count">(<span id="jobCount">0</span> listings)</span>
-        </h2>
-      </div>
-      
-      <div class="search-content">
-        <!-- Search Bar -->
-        <div class="search-bar">
+        <div class="search-box">
           <span class="material-icons search-icon">search</span>
-          <input type="text" id="searchInput" class="search-input" placeholder="Search job title, company, or keywords">
+          <input
+            type="text"
+            id="searchInput"
+            placeholder="Search job titles, companies, or keywords..."
+            class="search-input"
+          />
         </div>
-        
-        <!-- Filters -->
-        <div class="filters-row">
-          <div class="filter-group">
-            <label for="workTypeFilter" class="filter-label">Work Arrangement</label>
-            <select id="workTypeFilter" class="filter-select">
-              <option value="">All Types</option>
-              <option value="remote">Remote</option>
-              <option value="hybrid">Hybrid</option>
-              <option value="in-person">In-Person</option>
-            </select>
+
+        <div class="filters">
+          <div class="filter-row">
+            <div class="filter-group">
+              <label for="jobTypeFilter">Job Type</label>
+              <select id="jobTypeFilter" class="filter-select">
+                <option value="">All Types</option>
+                <option value="internship">Internship</option>
+                <option value="part-time">Part-Time</option>
+                <option value="full-time">Full-Time</option>
+                <option value="volunteer">Volunteer</option>
+              </select>
+            </div>
+
+            <div class="filter-group">
+              <label for="workArrangementFilter">Work Arrangement</label>
+              <select id="workArrangementFilter" class="filter-select">
+                <option value="">All Arrangements</option>
+                <option value="remote">Remote</option>
+                <option value="hybrid">Hybrid</option>
+                <option value="in-person">In-Person</option>
+              </select>
+            </div>
+
+            <div class="filter-group">
+              <label for="minPayFilter">Minimum Pay ($)</label>
+              <input
+                type="number"
+                id="minPayFilter"
+                placeholder="Min. amount"
+                class="filter-input"
+              />
+            </div>
+
+            <div class="filter-group">
+              <label for="sortByFilter">Sort By</label>
+              <select id="sortByFilter" class="filter-select">
+                <option value="date">Most Recent</option>
+                <option value="pay-high">Highest Pay</option>
+                <option value="pay-low">Lowest Pay</option>
+                <option value="applications">Most Applied</option>
+                <option value="alphabetical">A-Z</option>
+              </select>
+            </div>
           </div>
-          
-          <div class="filter-group">
-            <label for="minPayFilter" class="filter-label">Minimum Pay ($)</label>
-            <input type="number" id="minPayFilter" class="filter-input" placeholder="Enter minimum pay">
-          </div>
-          
-          <div class="filter-actions">
-            <button id="clearFiltersBtn" class="clear-filters-btn">Clear Filters</button>
-          </div>
+
+          <button id="clearFiltersBtn" class="btn clear-btn">
+            <span class="material-icons">refresh</span>
+            Clear Filters
+          </button>
+        </div>
+      </div>
+
+      <!-- Job Listings -->
+      <div class="jobs-container" id="jobListings">
+        <!-- Job cards will be dynamically loaded here -->
+      </div>
+
+      <!-- Pagination -->
+      <div class="pagination" id="pagination">
+        <!-- Pagination buttons will be dynamically generated -->
+      </div>
+
+      <!-- Need Help Section -->
+      <div class="help-section">
+        <div class="help-content">
+          <h2>Need Help Finding the Right Opportunity?</h2>
+          <p>
+            Schedule a meeting with a career advisor to get personalized
+            guidance on finding and applying for jobs that match your skills and
+            interests.
+          </p>
+          <button class="btn primary-btn">Schedule Meeting</button>
         </div>
       </div>
     </div>
-    
-    <!-- Job Listings -->
-<div class="job-listings-container" id="jobListings">
-  <!-- Frontend Developer at Microsoft -->
-  <div class="job-item">
-    <div class="job-header">
-      <div class="job-title-area">
-        <h2 class="job-title">Frontend Developer</h2>
-        <div class="company-name">Microsoft</div>
-      </div>
-      <div class="job-meta">
-        <span class="job-type-badge">Remote</span>
-        <span class="job-pay-badge">$80,000 - $95,000</span>
-      </div>
-    </div>
-    <div class="job-description">
-      <p>We are looking for a talented Frontend Developer to join our team. The ideal candidate will have experience with modern JavaScript frameworks and a strong understanding of responsive design principles.</p>
-    </div>
-    <div class="job-footer">
-      <span class="applications-count">24 applications</span>
-      <button class="apply-button">Apply Now</button>
-    </div>
-  </div>
 
-  <!-- UI/UX Design Assistant at Apple -->
-  <div class="job-item">
-    <div class="job-header">
-      <div class="job-title-area">
-        <h2 class="job-title">UI/UX Design Assistant</h2>
-        <div class="company-name">Apple</div>
+    <!-- Admin Password Modal -->
+    <div id="adminModal" class="modal">
+      <div class="modal-content">
+        <h2>Enter Admin Password</h2>
+        <p>Please enter the administrator password to access the admin panel</p>
+        <input
+          type="password"
+          id="adminPassword"
+          placeholder="Enter password"
+        />
+        <div class="modal-buttons">
+          <button id="submitAdminPassword" class="btn primary-btn">
+            Submit
+          </button>
+          <button id="closeAdminModal" class="btn secondary-btn">Cancel</button>
+        </div>
       </div>
-      <div class="job-meta">
-        <span class="job-type-badge">In-Person</span>
-        <span class="job-pay-badge">$25 - $35/hr</span>
-      </div>
     </div>
-    <div class="job-description">
-      <p>Support our design team in creating beautiful, intuitive interfaces for Apple products. Learn industry-best practices while contributing to real projects.</p>
-    </div>
-    <div class="job-footer">
-      <span class="applications-count">42 applications</span>
-      <button class="apply-button">Apply Now</button>
-    </div>
-  </div>
 
-  <!-- Data Science Intern at Google -->
-  <div class="job-item">
-    <div class="job-header">
-      <div class="job-title-area">
-        <h2 class="job-title">Data Science Intern</h2>
-        <div class="company-name">Google</div>
-      </div>
-      <div class="job-meta">
-        <span class="job-type-badge">Remote</span>
-        <span class="job-pay-badge">$35 - $45/hr</span>
-      </div>
-    </div>
-    <div class="job-description">
-      <p>Work with our data science team to analyze large datasets and help extract meaningful insights. You'll learn how to apply machine learning algorithms to solve real-world problems.</p>
-    </div>
-    <div class="job-footer">
-      <span class="applications-count">36 applications</span>
-      <button class="apply-button">Apply Now</button>
-    </div>
-  </div>
+    <!-- Back To Top Button -->
+    <button id="backToTopBtn" class="back-to-top">
+      <span class="material-icons">arrow_upward</span>
+    </button>
 
-  <!-- Marketing Assistant at Tesla -->
-  <div class="job-item">
-    <div class="job-header">
-      <div class="job-title-area">
-        <h2 class="job-title">Marketing Assistant</h2>
-        <div class="company-name">Tesla</div>
-      </div>
-      <div class="job-meta">
-        <span class="job-type-badge">Hybrid</span>
-        <span class="job-pay-badge">$22 - $28/hr</span>
-      </div>
-    </div>
-    <div class="job-description">
-      <p>Support our marketing team in creating engaging content for social media, email campaigns, and promotional materials. Help analyze marketing metrics and provide insights.</p>
-    </div>
-    <div class="job-footer">
-      <span class="applications-count">18 applications</span>
-      <button class="apply-button">Apply Now</button>
-    </div>
-  </div>
+    <!-- Script -->
+    <script>
+      document.addEventListener("DOMContentLoaded", function () {
+        // Sample job data (in a real application, this would come from a database)
+        const jobs = [
+          {
+            id: 1,
+            title: "Frontend Developer",
+            company: "Microsoft",
+            companyLogo: "/api/placeholder/20/20",
+            type: "Internship",
+            arrangement: "Remote",
+            pay: "$80,000 - $95,000",
+            description:
+              "We are looking for a talented Frontend Developer to join our team. The ideal candidate will have experience with modern JavaScript frameworks and a strong understanding of responsive design principles.",
+            skills: ["JavaScript", "React", "CSS", "HTML5"],
+            posted: "3 days ago",
+            applications: 24,
+          },
+          {
+            id: 2,
+            title: "UI/UX Design Assistant",
+            company: "Apple",
+            companyLogo: "/api/placeholder/20/20",
+            type: "Part-Time",
+            arrangement: "In-Person",
+            pay: "$25 - $35/hr",
+            description:
+              "Support our design team in creating beautiful, intuitive interfaces for Apple products. Learn industry-best practices while contributing to real projects.",
+            skills: ["Figma", "Adobe XD", "Prototyping", "UI Design"],
+            posted: "1 week ago",
+            applications: 42,
+          },
+          {
+            id: 3,
+            title: "Data Science Intern",
+            company: "Google",
+            companyLogo: "/api/placeholder/20/20",
+            type: "Internship",
+            arrangement: "Remote",
+            pay: "$35 - $45/hr",
+            description:
+              "Work with our data science team to analyze large datasets and help extract meaningful insights. You'll learn how to apply machine learning algorithms to solve real-world problems.",
+            skills: ["Python", "Machine Learning", "SQL", "Data Analysis"],
+            posted: "2 days ago",
+            applications: 36,
+          },
+          {
+            id: 4,
+            title: "Marketing Assistant",
+            company: "Tesla",
+            companyLogo: "/api/placeholder/20/20",
+            type: "Part-Time",
+            arrangement: "Hybrid",
+            pay: "$22 - $28/hr",
+            description:
+              "Support our marketing team in creating engaging content for social media, email campaigns, and promotional materials. Help analyze marketing metrics and provide insights.",
+            skills: [
+              "Social Media",
+              "Content Writing",
+              "Analytics",
+              "Photoshop",
+            ],
+            posted: "5 days ago",
+            applications: 18,
+          },
+          {
+            id: 5,
+            title: "Finance Intern",
+            company: "Netflix",
+            companyLogo: "/api/placeholder/20/20",
+            type: "Internship",
+            arrangement: "In-Person",
+            pay: "$28 - $38/hr",
+            description:
+              "Work with our finance team to support financial analysis, forecasting, and reporting. Learn about financial operations in a leading entertainment company.",
+            skills: [
+              "Excel",
+              "Financial Analysis",
+              "Accounting",
+              "Data Visualization",
+            ],
+            posted: "1 week ago",
+            applications: 15,
+          },
+          {
+            id: 6,
+            title: "Social Media Coordinator",
+            company: "Meta",
+            companyLogo: "/api/placeholder/20/20",
+            type: "Full-Time",
+            arrangement: "Hybrid",
+            pay: "$60,000 - $75,000",
+            description:
+              "Manage social media presence across various platforms. Create engaging content, monitor performance metrics, and collaborate with marketing team on campaigns.",
+            skills: [
+              "Social Media Management",
+              "Content Creation",
+              "Analytics",
+              "Marketing",
+            ],
+            posted: "2 weeks ago",
+            applications: 47,
+          },
+          {
+            id: 7,
+            title: "Software Engineering Intern",
+            company: "Amazon",
+            companyLogo: "/api/placeholder/20/20",
+            type: "Internship",
+            arrangement: "Remote",
+            pay: "$30 - $40/hr",
+            description:
+              "Join our engineering team to develop and maintain features for our e-commerce platform. Work on real projects that impact millions of customers.",
+            skills: ["Java", "AWS", "Algorithms", "System Design"],
+            posted: "4 days ago",
+            applications: 51,
+          },
+          {
+            id: 8,
+            title: "Product Design Intern",
+            company: "Airbnb",
+            companyLogo: "/api/placeholder/20/20",
+            type: "Internship",
+            arrangement: "Hybrid",
+            pay: "$25 - $35/hr",
+            description:
+              "Work with our product design team to create beautiful, intuitive user experiences. Contribute to the design of new features and improvements to existing ones.",
+            skills: ["UI/UX Design", "Figma", "User Research", "Prototyping"],
+            posted: "1 week ago",
+            applications: 29,
+          },
+          {
+            id: 9,
+            title: "Customer Support Representative",
+            company: "Spotify",
+            companyLogo: "/api/placeholder/20/20",
+            type: "Part-Time",
+            arrangement: "Remote",
+            pay: "$18 - $22/hr",
+            description:
+              "Assist customers with their inquiries and issues through email, chat, and phone. Provide excellent customer service and help users get the most out of their Spotify experience.",
+            skills: [
+              "Customer Service",
+              "Communication",
+              "Problem Solving",
+              "Patience",
+            ],
+            posted: "3 days ago",
+            applications: 14,
+          },
+          {
+            id: 10,
+            title: "Content Writer",
+            company: "Medium",
+            companyLogo: "/api/placeholder/20/20",
+            type: "Freelance",
+            arrangement: "Remote",
+            pay: "$40 - $60/hr",
+            description:
+              "Create engaging and informative content for our blog and social media channels. Topics include technology, business, creativity, and personal development.",
+            skills: ["Writing", "Editing", "Research", "SEO"],
+            posted: "6 days ago",
+            applications: 23,
+          },
+          {
+            id: 11,
+            title: "Backend Developer",
+            company: "Twitter",
+            companyLogo: "/api/placeholder/20/20",
+            type: "Full-Time",
+            arrangement: "Hybrid",
+            pay: "$90,000 - $120,000",
+            description:
+              "Develop and maintain server-side applications and infrastructure. Optimize performance, ensure scalability, and implement new features.",
+            skills: ["Node.js", "Python", "Databases", "System Architecture"],
+            posted: "1 week ago",
+            applications: 38,
+          },
+          {
+            id: 12,
+            title: "Graphic Design Intern",
+            company: "Adobe",
+            companyLogo: "/api/placeholder/20/20",
+            type: "Internship",
+            arrangement: "In-Person",
+            pay: "$24 - $30/hr",
+            description:
+              "Create visual assets for marketing campaigns, product interfaces, and documentation. Work with the creative team to maintain brand consistency and design standards.",
+            skills: ["Illustrator", "Photoshop", "InDesign", "Typography"],
+            posted: "2 weeks ago",
+            applications: 31,
+          },
+          {
+            id: 13,
+            title: "Business Analyst",
+            company: "LinkedIn",
+            companyLogo: "/api/placeholder/20/20",
+            type: "Full-Time",
+            arrangement: "In-Person",
+            pay: "$75,000 - $95,000",
+            description:
+              "Analyze business processes and user requirements. Identify opportunities for improvement and work with product teams to implement solutions.",
+            skills: [
+              "Data Analysis",
+              "Requirements Gathering",
+              "Process Improvement",
+              "SQL",
+            ],
+            posted: "5 days ago",
+            applications: 19,
+          },
+          {
+            id: 14,
+            title: "Machine Learning Engineer",
+            company: "NVIDIA",
+            companyLogo: "/api/placeholder/20/20",
+            type: "Full-Time",
+            arrangement: "Hybrid",
+            pay: "$110,000 - $150,000",
+            description:
+              "Develop and implement machine learning models and algorithms. Optimize performance and accuracy of existing models and contribute to research initiatives.",
+            skills: [
+              "TensorFlow",
+              "PyTorch",
+              "Deep Learning",
+              "Computer Vision",
+            ],
+            posted: "1 week ago",
+            applications: 43,
+          },
+          {
+            id: 15,
+            title: "Mobile App Developer",
+            company: "Uber",
+            companyLogo: "/api/placeholder/20/20",
+            type: "Full-Time",
+            arrangement: "Remote",
+            pay: "$85,000 - $115,000",
+            description:
+              "Build and maintain mobile applications for iOS and Android platforms. Implement new features, fix bugs, and optimize performance.",
+            skills: ["Swift", "Kotlin", "React Native", "Mobile Architecture"],
+            posted: "3 days ago",
+            applications: 27,
+          },
+          {
+            id: 16,
+            title: "Research Intern",
+            company: "Stanford University",
+            companyLogo: "/api/placeholder/20/20",
+            type: "Internship",
+            arrangement: "In-Person",
+            pay: "$20 - $25/hr",
+            description:
+              "Assist researchers with data collection, analysis, and documentation. Contribute to experiments and help prepare findings for publication.",
+            skills: [
+              "Research Methods",
+              "Data Analysis",
+              "Academic Writing",
+              "R or Python",
+            ],
+            posted: "2 weeks ago",
+            applications: 22,
+          },
+          {
+            id: 17,
+            title: "Video Production Assistant",
+            company: "YouTube",
+            companyLogo: "/api/placeholder/20/20",
+            type: "Part-Time",
+            arrangement: "Hybrid",
+            pay: "$22 - $28/hr",
+            description:
+              "Assist with video shoots, editing, and post-production. Help create engaging content for our educational and promotional channels.",
+            skills: [
+              "Premiere Pro",
+              "After Effects",
+              "Camera Operation",
+              "Lighting",
+            ],
+            posted: "4 days ago",
+            applications: 16,
+          },
+          {
+            id: 18,
+            title: "Cybersecurity Analyst",
+            company: "Cisco",
+            companyLogo: "/api/placeholder/20/20",
+            type: "Full-Time",
+            arrangement: "Remote",
+            pay: "$80,000 - $110,000",
+            description:
+              "Monitor network security and respond to incidents. Implement security measures and protocols to protect company assets and data.",
+            skills: [
+              "Network Security",
+              "Threat Analysis",
+              "Incident Response",
+              "Security Tools",
+            ],
+            posted: "1 week ago",
+            applications: 33,
+          },
+          {
+            id: 19,
+            title: "HR Coordinator",
+            company: "Salesforce",
+            companyLogo: "/api/placeholder/20/20",
+            type: "Full-Time",
+            arrangement: "In-Person",
+            pay: "$55,000 - $70,000",
+            description:
+              "Support HR operations including recruitment, onboarding, and employee relations. Maintain personnel records and assist with HR initiatives.",
+            skills: [
+              "HR Processes",
+              "Communication",
+              "Organization",
+              "HRIS Systems",
+            ],
+            posted: "3 days ago",
+            applications: 21,
+          },
+          {
+            id: 20,
+            title: "Project Management Intern",
+            company: "Intel",
+            companyLogo: "/api/placeholder/20/20",
+            type: "Internship",
+            arrangement: "Hybrid",
+            pay: "$25 - $35/hr",
+            description:
+              "Assist project managers in planning, executing, and monitoring projects. Learn about project management methodologies and tools.",
+            skills: [
+              "Project Coordination",
+              "Documentation",
+              "Time Management",
+              "Jira",
+            ],
+            posted: "2 weeks ago",
+            applications: 18,
+          },
+        ];
 
-  <!-- Finance Intern at Netflix -->
-  <div class="job-item">
-    <div class="job-header">
-      <div class="job-title-area">
-        <h2 class="job-title">Finance Intern</h2>
-        <div class="company-name">Netflix</div>
-      </div>
-      <div class="job-meta">
-        <span class="job-type-badge">In-Person</span>
-        <span class="job-pay-badge">$28 - $38/hr</span>
-      </div>
-    </div>
-    <div class="job-description">
-      <p>Work with our finance team to support financial analysis, forecasting, and reporting. Learn about financial operations in a leading entertainment company.</p>
-    </div>
-    <div class="job-footer">
-      <span class="applications-count">15 applications</span>
-      <button class="apply-button">Apply Now</button>
-    </div>
-  </div>
+        // Current state
+        let currentJobs = [...jobs];
+        let currentPage = 1;
+        const jobsPerPage = 10;
+        let appliedJobs = new Set();
 
-  <!-- Social Media Coordinator at Meta -->
-  <div class="job-item">
-    <div class="job-header">
-      <div class="job-title-area">
-        <h2 class="job-title">Social Media Coordinator</h2>
-        <div class="company-name">Meta</div>
-      </div>
-      <div class="job-meta">
-        <span class="job-type-badge">Hybrid</span>
-        <span class="job-pay-badge">$60,000 - $75,000</span>
-      </div>
-    </div>
-    <div class="job-description">
-      <p>Manage social media presence across various platforms. Create engaging content, monitor performance metrics, and collaborate with marketing team on campaigns.</p>
-    </div>
-    <div class="job-footer">
-      <span class="applications-count">47 applications</span>
-      <button class="apply-button">Apply Now</button>
-    </div>
-  </div>
-</div>
+        // UI Elements
+        const jobListingsElement = document.getElementById("jobListings");
+        const paginationElement = document.getElementById("pagination");
+        const jobCountElement = document.getElementById("jobCount");
+        const searchInput = document.getElementById("searchInput");
+        const jobTypeFilter = document.getElementById("jobTypeFilter");
+        const workArrangementFilter = document.getElementById(
+          "workArrangementFilter"
+        );
+        const minPayFilter = document.getElementById("minPayFilter");
+        const sortByFilter = document.getElementById("sortByFilter");
+        const clearFiltersBtn = document.getElementById("clearFiltersBtn");
 
-  <!-- Admin Password Popup Modal -->
-  <div id="adminModal" class="modal">
-    <div class="modal-content">
-      <h2>Enter Admin Password</h2>
-      <input type="password" id="adminPassword" placeholder="Enter password">
-      <div class="modal-buttons">
-        <button id="submitAdminPassword">Submit</button>
-        <button id="closeAdminModal">Cancel</button>
-      </div>
-    </div>
-  </div>
-  <script src="assets/js/jobs.js"></script>
-</body>
+        // Admin Panel Modal
+        const adminPanelLink = document.getElementById("adminPanelLink");
+        const adminModal = document.getElementById("adminModal");
+        const closeModalButton = document.getElementById("closeAdminModal");
+        const submitPasswordButton = document.getElementById(
+          "submitAdminPassword"
+        );
+
+        // Initialize
+        updateJobCount(jobs.length);
+        applyFiltersAndSort();
+
+        // Event Listeners
+        // Admin Panel Modal
+        adminPanelLink.addEventListener("click", function (event) {
+          event.preventDefault();
+          adminModal.classList.add("show");
+        });
+
+        closeModalButton.addEventListener("click", function () {
+          adminModal.classList.remove("show");
+        });
+
+        submitPasswordButton.addEventListener("click", function () {
+          const password = document.getElementById("adminPassword").value;
+          if (password === "admin123") {
+            window.location.href = "admin.html";
+          } else {
+            alert("Incorrect password. Please try again.");
+          }
+        });
+
+        window.addEventListener("click", function (event) {
+          if (event.target === adminModal) {
+            adminModal.classList.remove("show");
+          }
+        });
+
+        // Back to top button
+        const backToTopBtn = document.getElementById("backToTopBtn");
+
+        window.addEventListener("scroll", function () {
+          if (window.pageYOffset > 300) {
+            backToTopBtn.classList.add("show");
+          } else {
+            backToTopBtn.classList.remove("show");
+          }
+        });
+
+        backToTopBtn.addEventListener("click", function () {
+          window.scrollTo({
+            top: 0,
+            behavior: "smooth",
+          });
+        });
+
+        // Search and filters
+        searchInput.addEventListener("input", function () {
+          currentPage = 1;
+          applyFiltersAndSort();
+        });
+
+        jobTypeFilter.addEventListener("change", function () {
+          currentPage = 1;
+          applyFiltersAndSort();
+        });
+
+        workArrangementFilter.addEventListener("change", function () {
+          currentPage = 1;
+          applyFiltersAndSort();
+        });
+
+        minPayFilter.addEventListener("input", function () {
+          currentPage = 1;
+          applyFiltersAndSort();
+        });
+
+        sortByFilter.addEventListener("change", function () {
+          currentPage = 1;
+          applyFiltersAndSort();
+        });
+
+        clearFiltersBtn.addEventListener("click", function () {
+          searchInput.value = "";
+          jobTypeFilter.value = "";
+          workArrangementFilter.value = "";
+          minPayFilter.value = "";
+          sortByFilter.value = "date";
+          currentPage = 1;
+          applyFiltersAndSort();
+        });
+
+        // Functions
+        function applyFiltersAndSort() {
+          // Apply filters
+          let filteredJobs = jobs.filter((job) => {
+            const searchTerm = searchInput.value.toLowerCase();
+            const jobType = jobTypeFilter.value.toLowerCase();
+            const workArrangement = workArrangementFilter.value.toLowerCase();
+            const minPay = minPayFilter.value
+              ? parseFloat(minPayFilter.value)
+              : 0;
+
+            // Search term filter
+            const matchesSearch =
+              searchTerm === "" ||
+              job.title.toLowerCase().includes(searchTerm) ||
+              job.company.toLowerCase().includes(searchTerm) ||
+              job.description.toLowerCase().includes(searchTerm) ||
+              job.skills.some((skill) =>
+                skill.toLowerCase().includes(searchTerm)
+              );
+
+            // Job type filter
+            const matchesJobType =
+              jobType === "" || job.type.toLowerCase() === jobType;
+
+            // Work arrangement filter
+            const matchesArrangement =
+              workArrangement === "" ||
+              job.arrangement.toLowerCase() === workArrangement;
+
+            // Min pay filter
+            const matchesMinPay =
+              minPay === 0 || extractMinPayValue(job.pay) >= minPay;
+
+            return (
+              matchesSearch &&
+              matchesJobType &&
+              matchesArrangement &&
+              matchesMinPay
+            );
+          });
+
+          // Apply sorting
+          const sortType = sortByFilter.value;
+
+          switch (sortType) {
+            case "date":
+              // Most recent first (already in this order in our sample data)
+              break;
+            case "pay-high":
+              filteredJobs.sort(
+                (a, b) => extractMaxPayValue(b.pay) - extractMaxPayValue(a.pay)
+              );
+              break;
+            case "pay-low":
+              filteredJobs.sort(
+                (a, b) => extractMinPayValue(a.pay) - extractMinPayValue(b.pay)
+              );
+              break;
+            case "applications":
+              filteredJobs.sort((a, b) => b.applications - a.applications);
+              break;
+            case "alphabetical":
+              filteredJobs.sort((a, b) => a.title.localeCompare(b.title));
+              break;
+          }
+
+          currentJobs = filteredJobs;
+          updateJobCount(filteredJobs.length);
+          renderJobs();
+          renderPagination();
+        }
+
+        function renderJobs() {
+          jobListingsElement.innerHTML = "";
+
+          if (currentJobs.length === 0) {
+            jobListingsElement.innerHTML = `
+            <div class="no-jobs-message">
+              <span class="material-icons">search_off</span>
+              <h3>No jobs match your filters</h3>
+              <p>Try adjusting your search criteria or clear filters to see more results.</p>
+              <button class="btn primary-btn" onclick="document.getElementById('clearFiltersBtn').click()">Clear Filters</button>
+            </div>
+          `;
+            return;
+          }
+
+          // Calculate which jobs to show on current page
+          const startIndex = (currentPage - 1) * jobsPerPage;
+          const endIndex = Math.min(
+            startIndex + jobsPerPage,
+            currentJobs.length
+          );
+          const jobsToShow = currentJobs.slice(startIndex, endIndex);
+
+          // Create job cards
+          jobsToShow.forEach((job) => {
+            const jobElement = document.createElement("div");
+            jobElement.className = "job-card";
+            jobElement.setAttribute("data-job-id", job.id);
+
+            const isApplied = appliedJobs.has(job.id);
+
+            jobElement.innerHTML = `
+              <div class="job-header">
+                <div class="job-title-area">
+                  <h2 class="job-title">${job.title}</h2>
+                  <div class="company-name">
+                    ${job.company}
+                </div>
+              </div>
+              <div class="job-meta">
+                <span class="job-tag job-type">${job.type}</span>
+                <span class="job-tag job-arrangement">${job.arrangement}</span>
+                <span class="job-tag job-pay">${job.pay}</span>
+              </div>
+            </div>
+            
+            <div class="job-details">
+              <p class="job-description">${job.description}</p>
+              <div class="skills-container">
+                ${job.skills
+                  .map((skill) => `<span class="skill-tag">${skill}</span>`)
+                  .join("")}
+              </div>
+            </div>
+            
+            <div class="job-footer">
+              <div class="job-info">
+                <span class="job-posted">Posted ${job.posted}</span>
+                <span class="job-applications">${
+                  job.applications
+                } applications</span>
+              </div>
+              <button class="btn ${isApplied ? "applied-btn" : "apply-btn"}" ${
+              isApplied ? "disabled" : ""
+            } data-job-id="${job.id}">
+                ${isApplied ? "Applied" : "Apply Now"}
+              </button>
+            </div>
+          `;
+
+            jobListingsElement.appendChild(jobElement);
+          });
+
+          // Add event listeners to apply buttons
+          document.querySelectorAll(".apply-btn").forEach((button) => {
+            button.addEventListener("click", function () {
+              const jobId = parseInt(this.getAttribute("data-job-id"));
+              applyToJob(jobId);
+            });
+          });
+        }
+
+        function renderPagination() {
+          paginationElement.innerHTML = "";
+
+          if (currentJobs.length === 0) {
+            return;
+          }
+
+          const totalPages = Math.ceil(currentJobs.length / jobsPerPage);
+
+          // Previous button
+          const prevButton = document.createElement("button");
+          prevButton.className = "pagination-btn";
+          prevButton.innerHTML =
+            '<span class="material-icons">chevron_left</span>';
+          prevButton.disabled = currentPage === 1;
+          prevButton.addEventListener("click", () => {
+            if (currentPage > 1) {
+              currentPage--;
+              renderJobs();
+              renderPagination();
+              window.scrollTo({ top: 0, behavior: "smooth" });
+            }
+          });
+          paginationElement.appendChild(prevButton);
+
+          // Page numbers
+          let startPage = Math.max(1, currentPage - 2);
+          let endPage = Math.min(totalPages, startPage + 4);
+
+          if (endPage - startPage < 4 && totalPages > 5) {
+            startPage = Math.max(1, endPage - 4);
+          }
+
+          if (startPage > 1) {
+            const firstPageBtn = document.createElement("button");
+            firstPageBtn.className = "pagination-btn";
+            firstPageBtn.textContent = "1";
+            firstPageBtn.addEventListener("click", () => {
+              currentPage = 1;
+              renderJobs();
+              renderPagination();
+              window.scrollTo({ top: 0, behavior: "smooth" });
+            });
+            paginationElement.appendChild(firstPageBtn);
+
+            if (startPage > 2) {
+              const ellipsis = document.createElement("span");
+              ellipsis.className = "pagination-ellipsis";
+              ellipsis.textContent = "...";
+              paginationElement.appendChild(ellipsis);
+            }
+          }
+
+          for (let i = startPage; i <= endPage; i++) {
+            const pageButton = document.createElement("button");
+            pageButton.className = `pagination-btn ${
+              i === currentPage ? "active" : ""
+            }`;
+            pageButton.textContent = i;
+            pageButton.addEventListener("click", () => {
+              currentPage = i;
+              renderJobs();
+              renderPagination();
+              window.scrollTo({ top: 0, behavior: "smooth" });
+            });
+            paginationElement.appendChild(pageButton);
+          }
+
+          if (endPage < totalPages) {
+            if (endPage < totalPages - 1) {
+              const ellipsis = document.createElement("span");
+              ellipsis.className = "pagination-ellipsis";
+              ellipsis.textContent = "...";
+              paginationElement.appendChild(ellipsis);
+            }
+
+            const lastPageBtn = document.createElement("button");
+            lastPageBtn.className = "pagination-btn";
+            lastPageBtn.textContent = totalPages;
+            lastPageBtn.addEventListener("click", () => {
+              currentPage = totalPages;
+              renderJobs();
+              renderPagination();
+              window.scrollTo({ top: 0, behavior: "smooth" });
+            });
+            paginationElement.appendChild(lastPageBtn);
+          }
+
+          // Next button
+          const nextButton = document.createElement("button");
+          nextButton.className = "pagination-btn";
+          nextButton.innerHTML =
+            '<span class="material-icons">chevron_right</span>';
+          nextButton.disabled = currentPage === totalPages;
+          nextButton.addEventListener("click", () => {
+            if (currentPage < totalPages) {
+              currentPage++;
+              renderJobs();
+              renderPagination();
+              window.scrollTo({ top: 0, behavior: "smooth" });
+            }
+          });
+          paginationElement.appendChild(nextButton);
+        }
+
+        function applyToJob(jobId) {
+          // In a real app, this would send an API request
+          // For now, we'll just update the UI
+          appliedJobs.add(jobId);
+
+          // Update button appearance
+          const button = document.querySelector(
+            `.apply-btn[data-job-id="${jobId}"]`
+          );
+          if (button) {
+            button.classList.remove("apply-btn");
+            button.classList.add("applied-btn");
+            button.textContent = "Applied";
+            button.disabled = true;
+          }
+
+          // Update application count in the job data
+          const jobIndex = jobs.findIndex((job) => job.id === jobId);
+          if (jobIndex !== -1) {
+            jobs[jobIndex].applications++;
+
+            // Update the display
+            const applicationCountElement = document.querySelector(
+              `[data-job-id="${jobId}"] .job-applications`
+            );
+            if (applicationCountElement) {
+              applicationCountElement.textContent = `${jobs[jobIndex].applications} applications`;
+            }
+          }
+
+          // Show confirmation message
+          showNotification("Application submitted successfully!", "success");
+        }
+
+        function showNotification(message, type = "success") {
+          // Create notification element
+          const notification = document.createElement("div");
+          notification.className = `notification ${type}`;
+          notification.innerHTML = `<span class="material-icons">${
+            type === "success" ? "check_circle" : "error"
+          }</span>${message}`;
+
+          // Add to document
+          document.body.appendChild(notification);
+
+          // Animate in
+          setTimeout(() => {
+            notification.classList.add("show");
+          }, 10);
+
+          // Remove after delay
+          setTimeout(() => {
+            notification.classList.remove("show");
+            setTimeout(() => {
+              document.body.removeChild(notification);
+            }, 300);
+          }, 3000);
+        }
+
+        function updateJobCount(count) {
+          jobCountElement.textContent = count;
+        }
+
+        // Utility functions for sorting
+        function extractMinPayValue(payString) {
+          const match = payString.match(/\$(\d+)/);
+          return match ? parseInt(match[1]) : 0;
+        }
+
+        function extractMaxPayValue(payString) {
+          const match = payString.match(/\$\d+(?:\.\d+)?\s*-\s*\$(\d+)/);
+          return match ? parseInt(match[1]) : extractMinPayValue(payString);
+        }
+      });
+    </script>
+  </body>
 </html>

@@ -1,47 +1,45 @@
 // IndexedDB database configuration
-const DB_NAME = 'CareerBridgeDB';
+const DB_NAME = "CareerBridgeDB";
 const DB_VERSION = 1;
-const JOB_STORE_NAME = 'JobPostings';
+const JOB_STORE_NAME = "JobPostings";
 
 // Wait for DOM to be fully loaded before adding event listeners
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener("DOMContentLoaded", () => {
   // Load all approved job listings from the database
   loadJobListings();
 
-
-
   // Add event listener for the search input
-  const searchInput = document.getElementById('searchInput');
+  const searchInput = document.getElementById("searchInput");
   if (searchInput) {
-    searchInput.addEventListener('input', () => {
+    searchInput.addEventListener("input", () => {
       applyFilters();
     });
   }
-  
+
   // Add event listeners for filter inputs
-  const workTypeFilter = document.getElementById('workTypeFilter');
+  const workTypeFilter = document.getElementById("workTypeFilter");
   if (workTypeFilter) {
-    workTypeFilter.addEventListener('change', () => {
+    workTypeFilter.addEventListener("change", () => {
       applyFilters();
     });
   }
-  
-  const minPayFilter = document.getElementById('minPayFilter');
+
+  const minPayFilter = document.getElementById("minPayFilter");
   if (minPayFilter) {
-    minPayFilter.addEventListener('input', () => {
+    minPayFilter.addEventListener("input", () => {
       applyFilters();
     });
   }
-  
+
   // Add event listener for clear filters button
-  const clearFiltersBtn = document.getElementById('clearFiltersBtn');
+  const clearFiltersBtn = document.getElementById("clearFiltersBtn");
   if (clearFiltersBtn) {
-    clearFiltersBtn.addEventListener('click', () => {
+    clearFiltersBtn.addEventListener("click", () => {
       // Reset all filter inputs
-      if (workTypeFilter) workTypeFilter.value = '';
-      if (minPayFilter) minPayFilter.value = '';
-      if (searchInput) searchInput.value = '';
-      
+      if (workTypeFilter) workTypeFilter.value = "";
+      if (minPayFilter) minPayFilter.value = "";
+      if (searchInput) searchInput.value = "";
+
       // Reload all job listings
       loadJobListings();
     });
@@ -52,65 +50,68 @@ document.addEventListener('DOMContentLoaded', () => {
  * Load all approved job listings from the database and display them
  */
 function loadJobListings() {
-  const jobListingsContainer = document.getElementById('jobListings');
-  
+  const jobListingsContainer = document.getElementById("jobListings");
+
   // Show loading indicator
-  jobListingsContainer.innerHTML = '<div class="loading-message">Loading job listings...</div>';
-  
+  jobListingsContainer.innerHTML =
+    '<div class="loading-message">Loading job listings...</div>';
+
   // Open database connection
   const request = indexedDB.open(DB_NAME, DB_VERSION);
-  
+
   request.onerror = (event) => {
     jobListingsContainer.innerHTML = `<div class="error-message">
       Error loading database: ${event.target.error}</div>`;
   };
-  
+
   request.onsuccess = (event) => {
     const db = event.target.result;
-    
+
     // Check if the JobPostings store exists
     if (!db.objectStoreNames.contains(JOB_STORE_NAME)) {
       jobListingsContainer.innerHTML = `<div class="empty-message">
         No job listings available.</div>`;
       return;
     }
-    
-    const transaction = db.transaction([JOB_STORE_NAME], 'readonly');
+
+    const transaction = db.transaction([JOB_STORE_NAME], "readonly");
     const jobStore = transaction.objectStore(JOB_STORE_NAME);
     const getAllRequest = jobStore.getAll();
-    
+
     getAllRequest.onsuccess = () => {
       const allJobs = getAllRequest.result;
-      
+
       // Filter only approved jobs
-      const approvedJobs = allJobs.filter(job => job.jobStatus === 'Reviewed');
-      
+      const approvedJobs = allJobs.filter(
+        (job) => job.jobStatus === "Reviewed"
+      );
+
       if (approvedJobs.length === 0) {
         jobListingsContainer.innerHTML = `<div class="empty-message">
           No approved job listings available.</div>`;
         return;
       }
-      
+
       // Sort jobs by creation date (newest first)
       approvedJobs.sort((a, b) => {
         const dateA = new Date(a.dateCreated || 0);
         const dateB = new Date(b.dateCreated || 0);
         return dateB - dateA;
       });
-      
+
       // Clear and rebuild the jobs container
-      jobListingsContainer.innerHTML = '';
-      
+      jobListingsContainer.innerHTML = "";
+
       // Add each job to the container
-      approvedJobs.forEach(job => {
+      approvedJobs.forEach((job) => {
         const jobElement = createJobElement(job);
         jobListingsContainer.appendChild(jobElement);
       });
-      
+
       // Update job count
       updateJobCount(approvedJobs.length);
     };
-    
+
     getAllRequest.onerror = (event) => {
       jobListingsContainer.innerHTML = `<div class="error-message">
         Error fetching jobs: ${event.target.error}</div>`;
@@ -122,85 +123,92 @@ function loadJobListings() {
  * Apply all filters and search criteria to the job listings
  */
 function applyFilters() {
-  const searchInput = document.getElementById('searchInput');
-  const workTypeFilter = document.getElementById('workTypeFilter');
-  const minPayFilter = document.getElementById('minPayFilter');
-  
-  const searchTerm = searchInput ? searchInput.value.toLowerCase() : '';
-  const workType = workTypeFilter ? workTypeFilter.value : '';
-  const minPay = minPayFilter && minPayFilter.value ? parseFloat(minPayFilter.value) : null;
-  
+  const searchInput = document.getElementById("searchInput");
+  const workTypeFilter = document.getElementById("workTypeFilter");
+  const minPayFilter = document.getElementById("minPayFilter");
+
+  const searchTerm = searchInput ? searchInput.value.toLowerCase() : "";
+  const workType = workTypeFilter ? workTypeFilter.value : "";
+  const minPay =
+    minPayFilter && minPayFilter.value ? parseFloat(minPayFilter.value) : null;
+
   // Open database connection
   const request = indexedDB.open(DB_NAME, DB_VERSION);
-  
+
   request.onsuccess = (event) => {
     const db = event.target.result;
-    const transaction = db.transaction([JOB_STORE_NAME], 'readonly');
+    const transaction = db.transaction([JOB_STORE_NAME], "readonly");
     const jobStore = transaction.objectStore(JOB_STORE_NAME);
     const getAllRequest = jobStore.getAll();
-    
+
     getAllRequest.onsuccess = () => {
       const allJobs = getAllRequest.result;
-      
+
       // First filter for approved jobs only
-      let filteredJobs = allJobs.filter(job => job.jobStatus === 'Reviewed');
-      
+      let filteredJobs = allJobs.filter((job) => job.jobStatus === "Reviewed");
+
       // Then apply work type filter if selected
       if (workType) {
-        filteredJobs = filteredJobs.filter(job => job.workArrangement === workType);
+        filteredJobs = filteredJobs.filter(
+          (job) => job.workArrangement === workType
+        );
       }
-      
+
       // Apply min pay filter if provided
       if (minPay !== null) {
-        filteredJobs = filteredJobs.filter(job => {
+        filteredJobs = filteredJobs.filter((job) => {
           // Include jobs that have a minPay greater than or equal to the filter amount
           // OR jobs that have a maxPay greater than or equal to the filter amount
-          return (job.minPay !== null && job.minPay >= minPay) || 
-                 (job.maxPay !== null && job.maxPay >= minPay);
+          return (
+            (job.minPay !== null && job.minPay >= minPay) ||
+            (job.maxPay !== null && job.maxPay >= minPay)
+          );
         });
       }
-      
+
       // Apply search term if provided
       if (searchTerm) {
-        filteredJobs = filteredJobs.filter(job => {
+        filteredJobs = filteredJobs.filter((job) => {
           const jobTitle = job.jobTitle.toLowerCase();
           const company = job.company.toLowerCase();
           const description = job.jobDescription.toLowerCase();
-          
-          return jobTitle.includes(searchTerm) || 
-                 company.includes(searchTerm) || 
-                 description.includes(searchTerm);
+
+          return (
+            jobTitle.includes(searchTerm) ||
+            company.includes(searchTerm) ||
+            description.includes(searchTerm)
+          );
         });
       }
-      
+
       // Display filtered jobs
-      const jobListingsContainer = document.getElementById('jobListings');
-      
+      const jobListingsContainer = document.getElementById("jobListings");
+
       if (filteredJobs.length === 0) {
         jobListingsContainer.innerHTML = `<div class="empty-message">
           No jobs match your search criteria. <a href="#" id="resetFiltersLink">Reset filters</a></div>`;
-          
-        const resetLink = document.getElementById('resetFiltersLink');
+
+        const resetLink = document.getElementById("resetFiltersLink");
         if (resetLink) {
-          resetLink.addEventListener('click', (e) => {
+          resetLink.addEventListener("click", (e) => {
             e.preventDefault();
-            document.getElementById('clearFiltersBtn').click();
+            document.getElementById("clearFiltersBtn").click();
           });
         }
-        
+
         updateJobCount(0);
         return;
       }
-      
+
       // Clear and rebuild the jobs container
-      jobListingsContainer.innerHTML = '';
-      
+      jobListingsContainer.innerHTML = "";
+
       // Add each filtered job to the container
-      filteredJobs.forEach(job => {
+      filteredJobs.forEach((job) => {
         const jobElement = createJobElement(job);
         jobListingsContainer.appendChild(jobElement);
       });
-      
+
       // Update job count
       updateJobCount(filteredJobs.length);
     };
@@ -213,27 +221,27 @@ function applyFilters() {
  * @returns {HTMLElement} - The created job element
  */
 function createJobElement(job) {
-  const jobElement = document.createElement('div');
-  jobElement.className = 'job-item';
-  jobElement.setAttribute('data-job-id', job.id);
-  
+  const jobElement = document.createElement("div");
+  jobElement.className = "job-item";
+  jobElement.setAttribute("data-job-id", job.id);
+
   // Format pay range
-  let payDisplay = 'Unpaid Position';
+  let payDisplay = "Unpaid Position";
   if (job.minPay !== null) {
     payDisplay = `${job.minPay.toLocaleString()}`;
   } else if (job.maxPay !== null) {
     payDisplay = `${job.maxPay.toLocaleString()}`;
   }
-  
+
   // Get work arrangement text
   const workArrangement = getWorkArrangementInfo(job.workArrangement);
-  
+
   // Format application count
   const applicationCount = job.applicationCount || 0;
-  
+
   // Format the job description (truncate for preview)
   const truncatedDescription = truncateText(job.jobDescription, 200);
-  
+
   jobElement.innerHTML = `
     <div class="job-header">
       <div class="job-title-area">
@@ -253,26 +261,26 @@ function createJobElement(job) {
       <button class="apply-button" data-job-id="${job.id}">Apply Now</button>
     </div>
   `;
-  
+
   // Add event listener to Apply button
-  const applyButton = jobElement.querySelector('.apply-button');
+  const applyButton = jobElement.querySelector(".apply-button");
   if (applyButton) {
     // Check if the user has already applied to this job
     if (job.userHasApplied) {
-      applyButton.className = 'applied-button';
-      applyButton.textContent = 'Applied';
+      applyButton.className = "applied-button";
+      applyButton.textContent = "Applied";
       applyButton.disabled = true;
     } else {
-      applyButton.addEventListener('click', (e) => {
+      applyButton.addEventListener("click", (e) => {
         incrementApplicationCount(job.id);
         // Change button appearance after applying
-        e.target.className = 'applied-button';
-        e.target.textContent = 'Applied';
+        e.target.className = "applied-button";
+        e.target.textContent = "Applied";
         e.target.disabled = true;
       });
     }
   }
-  
+
   return jobElement;
 }
 
@@ -282,65 +290,72 @@ function createJobElement(job) {
  */
 function incrementApplicationCount(jobId) {
   const request = indexedDB.open(DB_NAME, DB_VERSION);
-  
+
   request.onsuccess = (event) => {
     const db = event.target.result;
-    const transaction = db.transaction([JOB_STORE_NAME], 'readwrite');
+    const transaction = db.transaction([JOB_STORE_NAME], "readwrite");
     const jobStore = transaction.objectStore(JOB_STORE_NAME);
-    
+
     // Get the job first to update it
     const getRequest = jobStore.get(jobId);
-    
+
     getRequest.onsuccess = () => {
       const job = getRequest.result;
       if (job) {
         // Update the application count
         job.applicationCount = (job.applicationCount || 0) + 1;
-        
+
         // Mark that the user has applied to this job
         job.userHasApplied = true;
-        
+
         // Put the updated job back into the store
         const updateRequest = jobStore.put(job);
-        
+
         updateRequest.onsuccess = () => {
           // Update the UI
-          const jobElement = document.querySelector(`.job-item[data-job-id="${jobId}"]`);
+          const jobElement = document.querySelector(
+            `.job-item[data-job-id="${jobId}"]`
+          );
           if (jobElement) {
-            const applicationsCountElement = jobElement.querySelector('.applications-count');
+            const applicationsCountElement = jobElement.querySelector(
+              ".applications-count"
+            );
             if (applicationsCountElement) {
               applicationsCountElement.textContent = `${job.applicationCount} applications`;
             }
-            
+
             // Check if apply button was updated in the event handler (direct click)
             // If not (e.g., in case of programmatic call), update it here
-            const applyButton = jobElement.querySelector('.apply-button');
-            if (applyButton && applyButton.className !== 'applied-button') {
-              applyButton.className = 'applied-button';
-              applyButton.textContent = 'Applied';
+            const applyButton = jobElement.querySelector(".apply-button");
+            if (applyButton && applyButton.className !== "applied-button") {
+              applyButton.className = "applied-button";
+              applyButton.textContent = "Applied";
               applyButton.disabled = true;
             }
           }
-          
+
           // Show success notification
-          showNotification('Application submitted successfully!', 'success');
+          showNotification("Application submitted successfully!", "success");
         };
-        
+
         updateRequest.onerror = (event) => {
-          showNotification(`Error submitting application: ${event.target.error}`, 'error');
+          showNotification(
+            `Error submitting application: ${event.target.error}`,
+            "error"
+          );
         };
       } else {
-        showNotification(`Job with ID ${jobId} not found`, 'error');
+        showNotification(`Job with ID ${jobId} not found`, "error");
       }
     };
-    
+
     getRequest.onerror = (event) => {
-      showNotification(`Error fetching job: ${event.target.error}`, 'error');
+      showNotification(`Error fetching job: ${event.target.error}`, "error");
     };
   };
-  
+
   request.onerror = (event) => {
-    showNotification(`Database error: ${event.target.error}`, 'error');
+    showNotification(`Database error: ${event.target.error}`, "error");
   };
 }
 
@@ -349,7 +364,7 @@ function incrementApplicationCount(jobId) {
  * @param {number} count - The number of jobs to display
  */
 function updateJobCount(count) {
-  const jobCountElement = document.getElementById('jobCount');
+  const jobCountElement = document.getElementById("jobCount");
   if (jobCountElement) {
     jobCountElement.textContent = count;
   }
@@ -362,14 +377,14 @@ function updateJobCount(count) {
  */
 function getWorkArrangementInfo(arrangement) {
   switch (arrangement) {
-    case 'remote':
-      return { text: 'Remote' };
-    case 'hybrid':
-      return { text: 'Hybrid' };
-    case 'in-person':
-      return { text: 'In-Person' };
+    case "remote":
+      return { text: "Remote" };
+    case "hybrid":
+      return { text: "Hybrid" };
+    case "in-person":
+      return { text: "In-Person" };
     default:
-      return { text: 'Flexible' };
+      return { text: "Flexible" };
   }
 }
 
@@ -380,9 +395,9 @@ function getWorkArrangementInfo(arrangement) {
  * @returns {string} - The truncated text
  */
 function truncateText(text, maxLength) {
-  if (!text) return '';
+  if (!text) return "";
   if (text.length <= maxLength) return text;
-  return text.substring(0, maxLength) + '...';
+  return text.substring(0, maxLength) + "...";
 }
 
 /**
@@ -390,47 +405,48 @@ function truncateText(text, maxLength) {
  * @param {string} message - The message to display
  * @param {string} type - The type of notification (success, error)
  */
-function showNotification(message, type = 'success') {
+function showNotification(message, type = "success") {
   // Check if notification container exists, create if not
-  let notificationContainer = document.getElementById('notificationContainer');
-  
+  let notificationContainer = document.getElementById("notificationContainer");
+
   if (!notificationContainer) {
-    notificationContainer = document.createElement('div');
-    notificationContainer.id = 'notificationContainer';
-    notificationContainer.style.position = 'fixed';
-    notificationContainer.style.top = '20px';
-    notificationContainer.style.right = '20px';
-    notificationContainer.style.zIndex = '1000';
+    notificationContainer = document.createElement("div");
+    notificationContainer.id = "notificationContainer";
+    notificationContainer.style.position = "fixed";
+    notificationContainer.style.top = "20px";
+    notificationContainer.style.right = "20px";
+    notificationContainer.style.zIndex = "1000";
     document.body.appendChild(notificationContainer);
   }
-  
+
   // Create notification element
-  const notification = document.createElement('div');
-  notification.style.backgroundColor = type === 'success' ? '#ecfdf5' : '#fef2f2';
-  notification.style.color = type === 'success' ? '#047857' : '#b91c1c';
-  notification.style.padding = '16px';
-  notification.style.borderRadius = '8px';
-  notification.style.marginBottom = '12px';
-  notification.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.1)';
-  notification.style.display = 'flex';
-  notification.style.alignItems = 'center';
-  
+  const notification = document.createElement("div");
+  notification.style.backgroundColor =
+    type === "success" ? "#ecfdf5" : "#fef2f2";
+  notification.style.color = type === "success" ? "#047857" : "#b91c1c";
+  notification.style.padding = "16px";
+  notification.style.borderRadius = "8px";
+  notification.style.marginBottom = "12px";
+  notification.style.boxShadow = "0 2px 8px rgba(0, 0, 0, 0.1)";
+  notification.style.display = "flex";
+  notification.style.alignItems = "center";
+
   // Add icon based on type
-  const icon = type === 'success' ? 'check_circle' : 'error';
-  
+  const icon = type === "success" ? "check_circle" : "error";
+
   notification.innerHTML = `
     <span class="material-icons" style="margin-right: 8px;">${icon}</span>
     <span>${message}</span>
   `;
-  
+
   // Add to container
   notificationContainer.appendChild(notification);
-  
+
   // Remove after 3 seconds
   setTimeout(() => {
-    notification.style.opacity = '0';
-    notification.style.transition = 'opacity 0.5s ease';
-    
+    notification.style.opacity = "0";
+    notification.style.transition = "opacity 0.5s ease";
+
     setTimeout(() => {
       if (notification.parentNode === notificationContainer) {
         notificationContainer.removeChild(notification);
