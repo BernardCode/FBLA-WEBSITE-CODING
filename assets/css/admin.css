@@ -771,4 +771,16 @@ body {
   .modal-content {
     width: 95%;
   }
+  .enter {
+    background-color: #bc05ff;
+    color: white;
+    border: none;
+    padding: 1rem 2rem;
+    border-radius: 8px;
+    font-weight: bold;
+    font-size: 1.1rem;
+    cursor: pointer;
+    transition: all 0.3s;
+    text-decoration: none;
+  }
 }
